@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>VLAN62 Monitor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sarabun:wght@400;500;600;700&display=swap');
+:root {
+  --bg:       #080c12;
+  --panel:    #0d1320;
+  --card:     #111827;
+  --border:   rgba(148,163,184,0.10);
+  --up:       #34d399;
+  --up-bg:    rgba(52,211,153,0.10);
+  --down:     #f87171;
+  --down-bg:  rgba(248,113,113,0.10);
+  --text:     #e2e8f0;
+  --muted:    #475569;
+  --accent:   #60a5fa;
+  --font:     'Sarabun', sans-serif;
+  --mono:     'IBM Plex Mono', monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;padding-bottom:40px}
+
+/* HEADER */
+.hdr{background:var(--panel);border-bottom:1px solid var(--border);padding:12px 16px;position:sticky;top:0;z-index:99}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.brand{display:flex;align-items:center;gap:9px}
+.pulse{width:9px;height:9px;border-radius:50%;background:var(--up);box-shadow:0 0 8px var(--up);transition:all .4s}
+.pulse.bad{background:var(--down);box-shadow:0 0 10px var(--down);animation:blink 1s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.brand-title{font-size:15px;font-weight:700}
+.brand-sub{font-size:12px;color:var(--muted);margin-left:6px;font-weight:400}
+.btn{background:transparent;border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:13px;padding:6px 13px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s}
+.btn:hover{background:var(--card)}
+.spin{animation:rot .6s linear infinite}
+@keyframes rot{to{transform:rotate(360deg)}}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.stat{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:8px 10px;text-align:center}
+.stat-n{font-size:24px;font-weight:700;font-family:var(--mono);line-height:1}
+.stat-n.u{color:var(--up)} .stat-n.d{color:var(--down)} .stat-n.t{color:var(--accent)}
+.stat-l{font-size:11px;color:var(--muted);margin-top:2px}
+
+/* PROGRESS */
+.prog-wrap{height:2px;background:var(--card)}
+.prog-fill{height:100%;background:var(--accent);transition:width 1s linear}
+.meta{display:flex;justify-content:space-between;padding:5px 16px;font-size:11px;color:var(--muted)}
+.meta span:last-child{font-family:var(--mono);color:var(--accent)}
+
+/* ALERT */
+.alert{margin:10px 16px 0;background:var(--down-bg);border:1px solid rgba(248,113,113,.25);border-radius:10px;padding:10px 13px;display:none}
+.alert-ttl{font-size:11px;font-weight:700;color:var(--down);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.alert-row{font-size:13px;padding:3px 0;border-bottom:1px solid rgba(248,113,113,.1)}
+.alert-row:last-child{border:none}
+.adur{font-family:var(--mono);font-size:11px;color:var(--down);margin-left:5px}
+
+/* ERROR */
+.errbar{margin:10px 16px 0;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:10px 13px;font-size:13px;color:#fbbf24;display:none}
+
+/* CONTENT */
+.content{padding:12px 16px 0}
+.zone-hdr{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:18px 0 8px;display:flex;align-items:center;gap:8px}
+.zone-hdr:first-child{margin-top:4px}
+.zone-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+
+/* CARDS */
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 12px 10px;position:relative;overflow:hidden;transition:border-color .3s}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
+.card.up{border-color:rgba(52,211,153,.18)} .card.up::before{background:var(--up)}
+.card.down{border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.03)} .card.down::before{background:var(--down)}
+.card-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:38px;margin-bottom:3px}
+.card-ip{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.card-dur{font-size:11px;color:var(--down);font-family:var(--mono);margin-top:3px}
+.badge{position:absolute;top:9px;right:9px;font-size:10px;font-weight:700;font-family:var(--mono);padding:2px 7px;border-radius:4px;letter-spacing:.04em}
+.card.up .badge{background:var(--up-bg);color:var(--up)}
+.card.down .badge{background:var(--down-bg);color:var(--down)}
+
+/* SKELETON */
+.sk{animation:sk 1.4s ease-in-out infinite}
+@keyframes sk{0%,100%{opacity:.3}50%{opacity:.7}}
+.sk-n{height:13px;background:var(--border);border-radius:4px;width:65%;margin-bottom:6px}
+.sk-i{height:11px;background:var(--border);border-radius:4px;width:50%}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-top">
+    <div class="brand">
+      <div class="pulse" id="dot"></div>
+      <span class="brand-title">Network Monitor<span class="brand-sub">VLAN62</span></span>
+    </div>
+    <button class="btn" id="btnR" onclick="load()">
+      <svg id="ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>
+      </svg>รีเฟรช
+    </button>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-n u" id="nUp">—</div><div class="stat-l">ออนไลน์</div></div>
+    <div class="stat"><div class="stat-n d" id="nDn">—</div><div class="stat-l">ออฟไลน์</div></div>
+    <div class="stat"><div class="stat-n t" id="nTt">—</div><div class="stat-l">ทั้งหมด</div></div>
+  </div>
+</div>
+
+<div class="prog-wrap"><div class="prog-fill" id="prog" style="width:100%"></div></div>
+<div class="meta"><span id="lastUpd">กำลังโหลด...</span><span id="cdTxt">—</span></div>
+
+<div class="errbar" id="err"></div>
+<div class="alert" id="alertBox">
+  <div class="alert-ttl">🔴 อุปกรณ์ออฟไลน์</div>
+  <div id="alertBody"></div>
+</div>
+
+<div class="content" id="main"></div>
+
+<script>
+const TOKEN   = "8830819103:AAHrzzpGlJR2GY0yK2k-pw8SIENeBiBteI4";
+const CHAT_ID = "8741011248";
+const REFRESH = 60;
+
+const ZONES = {
+  "ครัว":       ["Main Kitchen","Cold Kitchen","Thai Kitchen","Bekery","Bar Cafe"],
+  "LT":         ["Main LT","Cold LT","Bar LT"],
+  "CB":         ["Main CB","Cold CB","Bar CB"],
+  "HL / Pool":  ["Bar HL","Bar Pool"],
+  "BJ":         ["Main BJ","Bar BJ"],
+  "โครงสร้าง": ["Firewall","Core Switch"]
+};
+
+let cdN = REFRESH, cdT = null;
+
+function startCD() {
+  clearInterval(cdT);
+  cdN = REFRESH;
+  cdT = setInterval(() => {
+    cdN--;
+    document.getElementById('prog').style.width = (cdN/REFRESH*100) + '%';
+    document.getElementById('cdTxt').textContent = `รีเฟรชใน ${cdN}s`;
+    if (cdN <= 0) load();
+  }, 1000);
+}
+
+function skeleton() {
+  let h = '';
+  for (const [z, ns] of Object.entries(ZONES)) {
+    h += `<div class="zone-hdr">${z}</div><div class="grid">`;
+    ns.forEach(() => h += `<div class="card sk"><div class="sk-n"></div><div class="sk-i"></div></div>`);
+    h += `</div>`;
+  }
+  return h;
+}
+
+function render(devices) {
+  const map = {};
+  devices.forEach(d => map[d.name] = d);
+  let up = 0, dn = 0, downs = [], h = '';
+  for (const [z, ns] of Object.entries(ZONES)) {
+    h += `<div class="zone-hdr">${z}</div><div class="grid">`;
+    ns.forEach(n => {
+      const d = map[n]; if (!d) return;
+      const isUp = d.status.toLowerCase() === 'up';
+      isUp ? up++ : (dn++, downs.push(d));
+      const dur = !isUp && d.down_duration ? `<div class="card-dur">↓ ${d.down_duration}</div>` : '';
+      h += `<div class="card ${isUp?'up':'down'}">
+        <span class="badge">${isUp?'UP':'DOWN'}</span>
+        <div class="card-name">${d.name}</div>
+        <div class="card-ip">${d.ip}</div>${dur}
+      </div>`;
+    });
+    h += `</div>`;
+  }
+  document.getElementById('main').innerHTML = h;
+  document.getElementById('nUp').textContent = up;
+  document.getElementById('nDn').textContent = dn;
+  document.getElementById('nTt').textContent = up + dn;
+  document.title = dn > 0 ? `⚠️ DOWN ${dn} · VLAN62` : `✅ ปกติ · VLAN62`;
+  const dot = document.getElementById('dot');
+  dot.className = dn > 0 ? 'pulse bad' : 'pulse';
+  if (dn > 0) {
+    document.getElementById('alertBody').innerHTML = downs.map(d =>
+      `<div class="alert-row">❌ ${d.name} <span style="color:var(--muted);font-size:11px">(${d.ip})</span>${d.down_duration?`<span class="adur">${d.down_duration}</span>`:''}</div>`
+    ).join('');
+    document.getElementById('alertBox').style.display = 'block';
+  } else {
+    document.getElementById('alertBox').style.display = 'none';
+  }
+}
+
+// message_id ที่ monitor_v2.py ใช้ editMessageText
+const MSG_ID = 33;
+
+async function load() {
+  document.getElementById('ico').classList.add('spin');
+  document.getElementById('btnR').disabled = true;
+  document.getElementById('err').style.display = 'none';
+
+  try {
+    // ดึง message โดยตรงด้วย forwardMessage trick -> ใช้ copyMessage เพื่อ read text
+    // Telegram ไม่มี getMessage API สำหรับ private chat โดยตรง
+    // วิธีที่ work: ส่ง forwardMessage ไปหาตัวเอง แล้วอ่าน text จาก response
+    const fwd = await fetch(`https://api.telegram.org/bot${TOKEN}/forwardMessage`, {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        chat_id: CHAT_ID,
+        from_chat_id: CHAT_ID,
+        message_id: MSG_ID
+      })
+    });
+    const fdata = await fwd.json();
+
+    if (fdata.ok && fdata.result?.text) {
+      const txt = fdata.result.text;
+      // ลบ forward message ที่เพิ่งส่งออก (cleanup)
+      const newMsgId = fdata.result.message_id;
+      fetch(`https://api.telegram.org/bot${TOKEN}/deleteMessage`, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ chat_id: CHAT_ID, message_id: newMsgId })
+      });
+
+      if (txt.includes('"NETMON_STATUS"')) {
+        const parsed = JSON.parse(txt);
+        render(parsed.devices);
+        document.getElementById('lastUpd').textContent = 'อัปเดต: ' + parsed.last_update;
+        startCD();
+        return;
+      }
+    }
+
+    showErr('⏳ ยังไม่มีข้อมูล — รอให้ monitor_v2.py รันแล้วลองใหม่');
+    document.getElementById('main').innerHTML = skeleton();
+
+  } catch(e) {
+    showErr('⚠️ ดึงข้อมูลไม่ได้: ' + e.message);
+  }
+
+  document.getElementById('ico').classList.remove('spin');
+  document.getElementById('btnR').disabled = false;
+}
+
+function showErr(msg) {
+  const el = document.getElementById('err');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+document.getElementById('main').innerHTML = skeleton();
+load();
+</script>
+</body>
+</html>
