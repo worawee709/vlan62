@@ -1,137 +1,394 @@
 <!DOCTYPE html>
-<html lang="th">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>VLAN62 Monitor</title>
+<title>VLAN62 · Network Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=Sarabun:wght@400;500;600;700&display=swap');
 :root {
-  --bg:       #080c12;
-  --panel:    #0d1320;
-  --card:     #111827;
-  --border:   rgba(148,163,184,0.10);
-  --up:       #34d399;
-  --up-bg:    rgba(52,211,153,0.10);
-  --down:     #f87171;
-  --down-bg:  rgba(248,113,113,0.10);
-  --text:     #e2e8f0;
-  --muted:    #475569;
-  --accent:   #60a5fa;
-  --font:     'Sarabun', sans-serif;
-  --mono:     'IBM Plex Mono', monospace;
+  --bg:        #050810;
+  --bg2:       #0a0f1e;
+  --surface:   #0f1629;
+  --card:      #141c30;
+  --border:    rgba(255,255,255,0.07);
+  --border2:   rgba(255,255,255,0.12);
+  --up:        #00e5a0;
+  --up-glow:   rgba(0,229,160,0.15);
+  --up-soft:   rgba(0,229,160,0.08);
+  --down:      #ff4d6d;
+  --down-glow: rgba(255,77,109,0.15);
+  --down-soft: rgba(255,77,109,0.07);
+  --text:      #e8eef8;
+  --text2:     #8899b4;
+  --accent:    #4d9fff;
+  --accent2:   #7b5ea7;
+  --mono:      'DM Mono', monospace;
+  --sans:      'Outfit', sans-serif;
 }
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;padding-bottom:40px}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  padding-bottom: 60px;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* BG GRID */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image:
+    linear-gradient(rgba(77,159,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(77,159,255,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+}
 
 /* HEADER */
-.hdr{background:var(--panel);border-bottom:1px solid var(--border);padding:12px 16px;position:sticky;top:0;z-index:99}
-.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.brand{display:flex;align-items:center;gap:9px}
-.pulse{width:9px;height:9px;border-radius:50%;background:var(--up);box-shadow:0 0 8px var(--up);transition:all .4s}
-.pulse.bad{background:var(--down);box-shadow:0 0 10px var(--down);animation:blink 1s infinite}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
-.brand-title{font-size:15px;font-weight:700}
-.brand-sub{font-size:12px;color:var(--muted);margin-left:6px;font-weight:400}
-.btn{background:transparent;border:1px solid var(--border);color:var(--text);font-family:var(--font);font-size:13px;padding:6px 13px;border-radius:7px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:background .2s}
-.btn:hover{background:var(--card)}
-.spin{animation:rot .6s linear infinite}
-@keyframes rot{to{transform:rotate(360deg)}}
+.header {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(5,8,16,0.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 14px 18px 12px;
+}
+.header-top {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand-icon {
+  width: 32px; height: 32px;
+  background: linear-gradient(135deg, #4d9fff22, #7b5ea722);
+  border: 1px solid rgba(77,159,255,0.25);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px;
+}
+.brand-text h1 {
+  font-size: 15px; font-weight: 700;
+  letter-spacing: -0.01em; line-height: 1;
+}
+.brand-text p {
+  font-size: 11px; color: var(--text2);
+  font-family: var(--mono); margin-top: 1px;
+}
+.live-badge {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--up-soft);
+  border: 1px solid rgba(0,229,160,0.2);
+  border-radius: 20px;
+  padding: 4px 10px;
+  font-size: 11px; font-weight: 600;
+  color: var(--up);
+  font-family: var(--mono);
+  transition: all .4s;
+}
+.live-badge.warn {
+  background: var(--down-soft);
+  border-color: rgba(255,77,109,0.2);
+  color: var(--down);
+}
+.live-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: livepulse 2s infinite;
+}
+.live-badge.warn .live-dot { animation: warnpulse 0.8s infinite; }
+@keyframes livepulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+@keyframes warnpulse { 0%,100%{opacity:1} 50%{opacity:.2} }
 
-/* STATS */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
-.stat{background:var(--card);border:1px solid var(--border);border-radius:9px;padding:8px 10px;text-align:center}
-.stat-n{font-size:24px;font-weight:700;font-family:var(--mono);line-height:1}
-.stat-n.u{color:var(--up)} .stat-n.d{color:var(--down)} .stat-n.t{color:var(--accent)}
-.stat-l{font-size:11px;color:var(--muted);margin-top:2px}
+/* STAT CARDS */
+.stats {
+  display: grid; grid-template-columns: repeat(3,1fr);
+  gap: 8px;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  position: relative; overflow: hidden;
+}
+.stat::after {
+  content: '';
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  border-radius: 12px 12px 0 0;
+}
+.stat.up::after   { background: linear-gradient(90deg, var(--up), transparent); }
+.stat.down::after { background: linear-gradient(90deg, var(--down), transparent); }
+.stat.total::after{ background: linear-gradient(90deg, var(--accent), transparent); }
+.stat-num {
+  font-size: 28px; font-weight: 800;
+  font-family: var(--mono); line-height: 1;
+}
+.stat.up   .stat-num { color: var(--up); }
+.stat.down .stat-num { color: var(--down); }
+.stat.total .stat-num { color: var(--accent); }
+.stat-label {
+  font-size: 11px; color: var(--text2);
+  font-weight: 500; margin-top: 2px;
+  text-transform: uppercase; letter-spacing: .06em;
+}
 
-/* PROGRESS */
-.prog-wrap{height:2px;background:var(--card)}
-.prog-fill{height:100%;background:var(--accent);transition:width 1s linear}
-.meta{display:flex;justify-content:space-between;padding:5px 16px;font-size:11px;color:var(--muted)}
-.meta span:last-child{font-family:var(--mono);color:var(--accent)}
+/* PROGRESS BAR */
+.prog-track {
+  height: 2px;
+  background: var(--surface);
+  position: relative; z-index: 1;
+}
+.prog-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #7b5ea7);
+  transition: width 1s linear;
+}
+.meta-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 18px;
+  position: relative; z-index: 1;
+}
+.meta-time { font-size: 11px; color: var(--text2); }
+.meta-cd {
+  font-size: 11px; color: var(--accent);
+  font-family: var(--mono);
+}
 
-/* ALERT */
-.alert{margin:10px 16px 0;background:var(--down-bg);border:1px solid rgba(248,113,113,.25);border-radius:10px;padding:10px 13px;display:none}
-.alert-ttl{font-size:11px;font-weight:700;color:var(--down);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
-.alert-row{font-size:13px;padding:3px 0;border-bottom:1px solid rgba(248,113,113,.1)}
-.alert-row:last-child{border:none}
-.adur{font-family:var(--mono);font-size:11px;color:var(--down);margin-left:5px}
+/* ALERTS */
+.alert-wrap { padding: 0 18px; margin-top: 12px; position: relative; z-index: 1; }
+.alert-box {
+  background: var(--down-soft);
+  border: 1px solid rgba(255,77,109,0.2);
+  border-radius: 14px; padding: 12px 14px;
+  display: none;
+}
+.alert-head {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 12px; font-weight: 700;
+  color: var(--down);
+  text-transform: uppercase; letter-spacing: .08em;
+  margin-bottom: 8px;
+}
+.alert-item {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,77,109,0.1);
+  font-size: 13px;
+}
+.alert-item:last-child { border: none; padding-bottom: 0; }
+.alert-name { font-weight: 600; }
+.alert-ip   { font-size: 11px; color: var(--text2); font-family: var(--mono); }
+.alert-dur  { font-size: 11px; color: var(--down); font-family: var(--mono); background: var(--down-soft); padding: 2px 7px; border-radius: 4px; }
 
-/* ERROR */
-.errbar{margin:10px 16px 0;background:rgba(251,191,36,.08);border:1px solid rgba(251,191,36,.3);border-radius:8px;padding:10px 13px;font-size:13px;color:#fbbf24;display:none}
+.err-box {
+  background: rgba(251,191,36,.07);
+  border: 1px solid rgba(251,191,36,.25);
+  border-radius: 12px; padding: 11px 14px;
+  font-size: 13px; color: #fbbf24;
+  display: none; margin-top: 10px;
+}
 
-/* CONTENT */
-.content{padding:12px 16px 0}
-.zone-hdr{font-size:10px;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:18px 0 8px;display:flex;align-items:center;gap:8px}
-.zone-hdr:first-child{margin-top:4px}
-.zone-hdr::after{content:'';flex:1;height:1px;background:var(--border)}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px}
+/* ZONES */
+.content { padding: 16px 18px 0; position: relative; z-index: 1; }
+.zone {  margin-bottom: 6px; }
+.zone-header {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 9px; margin-top: 20px;
+}
+.zone-header:first-child { margin-top: 0; }
+.zone-name {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .12em;
+  color: var(--text2);
+  white-space: nowrap;
+}
+.zone-line { flex: 1; height: 1px; background: var(--border); }
+.zone-count {
+  font-size: 10px; font-family: var(--mono);
+  color: var(--text2); background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 1px 7px; border-radius: 10px;
+}
 
-/* CARDS */
-.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 12px 10px;position:relative;overflow:hidden;transition:border-color .3s}
-.card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:10px 10px 0 0}
-.card.up{border-color:rgba(52,211,153,.18)} .card.up::before{background:var(--up)}
-.card.down{border-color:rgba(248,113,113,.3);background:rgba(248,113,113,.03)} .card.down::before{background:var(--down)}
-.card-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:38px;margin-bottom:3px}
-.card-ip{font-size:11px;color:var(--muted);font-family:var(--mono)}
-.card-dur{font-size:11px;color:var(--down);font-family:var(--mono);margin-top:3px}
-.badge{position:absolute;top:9px;right:9px;font-size:10px;font-weight:700;font-family:var(--mono);padding:2px 7px;border-radius:4px;letter-spacing:.04em}
-.card.up .badge{background:var(--up-bg);color:var(--up)}
-.card.down .badge{background:var(--down-bg);color:var(--down)}
+/* DEVICE GRID */
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(2,1fr);
+  gap: 8px;
+}
+.device-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 12px 13px 11px;
+  position: relative; overflow: hidden;
+  transition: transform .15s, border-color .3s, box-shadow .3s;
+  cursor: default;
+}
+.device-card:active { transform: scale(.97); }
+.device-card.up {
+  border-color: rgba(0,229,160,0.15);
+}
+.device-card.up:hover {
+  border-color: rgba(0,229,160,0.3);
+  box-shadow: 0 0 20px rgba(0,229,160,0.06);
+}
+.device-card.down {
+  border-color: rgba(255,77,109,0.25);
+  background: rgba(255,77,109,0.04);
+  box-shadow: 0 0 20px rgba(255,77,109,0.05);
+}
+.card-accent {
+  position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  border-radius: 12px 12px 0 0;
+}
+.device-card.up   .card-accent { background: linear-gradient(90deg, var(--up), transparent 70%); }
+.device-card.down .card-accent { background: linear-gradient(90deg, var(--down), transparent 70%); }
+
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
+.card-name {
+  font-size: 13px; font-weight: 600;
+  line-height: 1.2;
+  padding-right: 4px;
+}
+.card-badge {
+  font-size: 9px; font-weight: 700;
+  font-family: var(--mono);
+  padding: 3px 7px; border-radius: 5px;
+  letter-spacing: .06em; flex-shrink: 0;
+  margin-top: 1px;
+}
+.device-card.up   .card-badge { background: var(--up-soft);   color: var(--up); }
+.device-card.down .card-badge { background: var(--down-soft); color: var(--down); }
+
+.card-ip {
+  font-size: 11px; color: var(--text2);
+  font-family: var(--mono);
+}
+.card-dur {
+  font-size: 10px; color: var(--down);
+  font-family: var(--mono);
+  margin-top: 4px;
+  display: flex; align-items: center; gap: 4px;
+}
+.card-dur::before { content: '↓'; }
+
+/* REFRESH BUTTON */
+.btn-refresh {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px; font-weight: 500;
+  padding: 7px 14px; border-radius: 9px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 7px;
+  transition: background .2s, border-color .2s, transform .1s;
+}
+.btn-refresh:hover { background: var(--card); border-color: rgba(255,255,255,.2); }
+.btn-refresh:active { transform: scale(.95); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { animation: spin .6s linear infinite; }
 
 /* SKELETON */
-.sk{animation:sk 1.4s ease-in-out infinite}
-@keyframes sk{0%,100%{opacity:.3}50%{opacity:.7}}
-.sk-n{height:13px;background:var(--border);border-radius:4px;width:65%;margin-bottom:6px}
-.sk-i{height:11px;background:var(--border);border-radius:4px;width:50%}
+.skel { animation: skel 1.6s ease-in-out infinite; }
+@keyframes skel { 0%,100%{opacity:.25} 50%{opacity:.55} }
+.skel-bar { background: var(--border2); border-radius: 4px; }
+
+/* FOOTER */
+.footer {
+  text-align: center; margin-top: 28px;
+  font-size: 11px; color: var(--text2);
+  font-family: var(--mono);
+  position: relative; z-index: 1;
+}
 </style>
 </head>
 <body>
 
-<div class="hdr">
-  <div class="hdr-top">
+<!-- HEADER -->
+<div class="header">
+  <div class="header-top">
     <div class="brand">
-      <div class="pulse" id="dot"></div>
-      <span class="brand-title">Network Monitor<span class="brand-sub">VLAN62</span></span>
+      <div class="brand-icon">📡</div>
+      <div class="brand-text">
+        <h1>Network Monitor</h1>
+        <p>VLAN 62 · 17 devices</p>
+      </div>
     </div>
-    <button class="btn" id="btnR" onclick="load()">
-      <svg id="ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
-        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>
-      </svg>รีเฟรช
-    </button>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="live-badge" id="liveBadge">
+        <span class="live-dot"></span>
+        <span id="liveText">LIVE</span>
+      </div>
+      <button class="btn-refresh" id="btnR" onclick="load()">
+        <svg id="ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+          <path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+          <path d="M16 16h5v5"/>
+        </svg>
+        Refresh
+      </button>
+    </div>
   </div>
+
   <div class="stats">
-    <div class="stat"><div class="stat-n u" id="nUp">—</div><div class="stat-l">ออนไลน์</div></div>
-    <div class="stat"><div class="stat-n d" id="nDn">—</div><div class="stat-l">ออฟไลน์</div></div>
-    <div class="stat"><div class="stat-n t" id="nTt">—</div><div class="stat-l">ทั้งหมด</div></div>
+    <div class="stat up">
+      <div class="stat-num" id="nUp">—</div>
+      <div class="stat-label">Online</div>
+    </div>
+    <div class="stat down">
+      <div class="stat-num" id="nDn">—</div>
+      <div class="stat-label">Offline</div>
+    </div>
+    <div class="stat total">
+      <div class="stat-num" id="nTt">—</div>
+      <div class="stat-label">Total</div>
+    </div>
   </div>
 </div>
 
-<div class="prog-wrap"><div class="prog-fill" id="prog" style="width:100%"></div></div>
-<div class="meta"><span id="lastUpd">กำลังโหลด...</span><span id="cdTxt">—</span></div>
+<div class="prog-track"><div class="prog-fill" id="prog" style="width:100%"></div></div>
+<div class="meta-row">
+  <span class="meta-time" id="lastUpd">Loading...</span>
+  <span class="meta-cd" id="cdTxt">—</span>
+</div>
 
-<div class="errbar" id="err"></div>
-<div class="alert" id="alertBox">
-  <div class="alert-ttl">🔴 อุปกรณ์ออฟไลน์</div>
-  <div id="alertBody"></div>
+<div class="alert-wrap">
+  <div class="err-box" id="err"></div>
+  <div class="alert-box" id="alertBox">
+    <div class="alert-head">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      Offline Devices
+    </div>
+    <div id="alertBody"></div>
+  </div>
 </div>
 
 <div class="content" id="main"></div>
 
+<div class="footer" id="footer"></div>
+
 <script>
 const TOKEN   = "8830819103:AAHrzzpGlJR2GY0yK2k-pw8SIENeBiBteI4";
 const CHAT_ID = "8741011248";
+const MSG_ID  = 33;
 const REFRESH = 60;
 
 const ZONES = {
-  "ครัว":       ["Main Kitchen","Cold Kitchen","Thai Kitchen","Bekery","Bar Cafe"],
-  "LT":         ["Main LT","Cold LT","Bar LT"],
-  "CB":         ["Main CB","Cold CB","Bar CB"],
-  "HL / Pool":  ["Bar HL","Bar Pool"],
-  "BJ":         ["Main BJ","Bar BJ"],
-  "โครงสร้าง": ["Firewall","Core Switch"]
+  "Kitchen":     ["Main Kitchen","Cold Kitchen","Thai Kitchen","Bekery","Bar Cafe"],
+  "LT":          ["Main LT","Cold LT","Bar LT"],
+  "CB":          ["Main CB","Cold CB","Bar CB"],
+  "HL & Pool":   ["Bar HL","Bar Pool"],
+  "BJ":          ["Main BJ","Bar BJ"],
+  "Infrastructure": ["Firewall","Core Switch"]
 };
 
 let cdN = REFRESH, cdT = null;
@@ -141,8 +398,8 @@ function startCD() {
   cdN = REFRESH;
   cdT = setInterval(() => {
     cdN--;
-    document.getElementById('prog').style.width = (cdN/REFRESH*100) + '%';
-    document.getElementById('cdTxt').textContent = `รีเฟรชใน ${cdN}s`;
+    document.getElementById('prog').style.width = (cdN / REFRESH * 100) + '%';
+    document.getElementById('cdTxt').textContent = `Next refresh in ${cdN}s`;
     if (cdN <= 0) load();
   }, 1000);
 }
@@ -150,9 +407,20 @@ function startCD() {
 function skeleton() {
   let h = '';
   for (const [z, ns] of Object.entries(ZONES)) {
-    h += `<div class="zone-hdr">${z}</div><div class="grid">`;
-    ns.forEach(() => h += `<div class="card sk"><div class="sk-n"></div><div class="sk-i"></div></div>`);
-    h += `</div>`;
+    h += `<div class="zone">
+      <div class="zone-header">
+        <span class="zone-name">${z}</span>
+        <span class="zone-line"></span>
+        <span class="zone-count">${ns.length}</span>
+      </div>
+      <div class="device-grid">`;
+    ns.forEach(() => {
+      h += `<div class="device-card skel" style="height:72px">
+        <div class="skel-bar" style="width:60%;height:13px;margin-bottom:8px"></div>
+        <div class="skel-bar" style="width:45%;height:11px"></div>
+      </div>`;
+    });
+    h += `</div></div>`;
   }
   return h;
 }
@@ -161,94 +429,110 @@ function render(devices) {
   const map = {};
   devices.forEach(d => map[d.name] = d);
   let up = 0, dn = 0, downs = [], h = '';
-  for (const [z, ns] of Object.entries(ZONES)) {
-    h += `<div class="zone-hdr">${z}</div><div class="grid">`;
-    ns.forEach(n => {
-      const d = map[n]; if (!d) return;
+
+  for (const [zone, names] of Object.entries(ZONES)) {
+    const zoneDevices = names.map(n => map[n]).filter(Boolean);
+    const zoneDown = zoneDevices.filter(d => d.status.toLowerCase() !== 'up').length;
+    h += `<div class="zone">
+      <div class="zone-header">
+        <span class="zone-name">${zone}</span>
+        <span class="zone-line"></span>
+        <span class="zone-count" style="${zoneDown > 0 ? 'color:var(--down);border-color:rgba(255,77,109,.3)' : ''}">${zoneDevices.length - zoneDown}/${zoneDevices.length}</span>
+      </div>
+      <div class="device-grid">`;
+
+    zoneDevices.forEach(d => {
       const isUp = d.status.toLowerCase() === 'up';
       isUp ? up++ : (dn++, downs.push(d));
-      const dur = !isUp && d.down_duration ? `<div class="card-dur">↓ ${d.down_duration}</div>` : '';
-      h += `<div class="card ${isUp?'up':'down'}">
-        <span class="badge">${isUp?'UP':'DOWN'}</span>
-        <div class="card-name">${d.name}</div>
-        <div class="card-ip">${d.ip}</div>${dur}
+      const dur = !isUp && d.down_duration
+        ? `<div class="card-dur">${d.down_duration}</div>` : '';
+      h += `<div class="device-card ${isUp ? 'up' : 'down'}">
+        <div class="card-accent"></div>
+        <div class="card-top">
+          <div class="card-name">${d.name}</div>
+          <span class="card-badge">${isUp ? 'UP' : 'DOWN'}</span>
+        </div>
+        <div class="card-ip">${d.ip}</div>
+        ${dur}
       </div>`;
     });
-    h += `</div>`;
+    h += `</div></div>`;
   }
+
   document.getElementById('main').innerHTML = h;
   document.getElementById('nUp').textContent = up;
   document.getElementById('nDn').textContent = dn;
   document.getElementById('nTt').textContent = up + dn;
-  document.title = dn > 0 ? `⚠️ DOWN ${dn} · VLAN62` : `✅ ปกติ · VLAN62`;
-  const dot = document.getElementById('dot');
-  dot.className = dn > 0 ? 'pulse bad' : 'pulse';
+  document.title = dn > 0 ? `⚠️ ${dn} Offline · VLAN62` : `✅ All Online · VLAN62`;
+  document.getElementById('footer').textContent = `VLAN62 Network Monitor · ${up + dn} devices tracked`;
+
+  const badge = document.getElementById('liveBadge');
+  const liveText = document.getElementById('liveText');
   if (dn > 0) {
-    document.getElementById('alertBody').innerHTML = downs.map(d =>
-      `<div class="alert-row">❌ ${d.name} <span style="color:var(--muted);font-size:11px">(${d.ip})</span>${d.down_duration?`<span class="adur">${d.down_duration}</span>`:''}</div>`
-    ).join('');
+    badge.className = 'live-badge warn';
+    liveText.textContent = `${dn} DOWN`;
+    document.getElementById('alertBody').innerHTML = downs.map(d => `
+      <div class="alert-item">
+        <div>
+          <div class="alert-name">${d.name}</div>
+          <div class="alert-ip">${d.ip}</div>
+        </div>
+        ${d.down_duration ? `<span class="alert-dur">${d.down_duration}</span>` : ''}
+      </div>`).join('');
     document.getElementById('alertBox').style.display = 'block';
   } else {
+    badge.className = 'live-badge';
+    liveText.textContent = 'ALL ONLINE';
     document.getElementById('alertBox').style.display = 'none';
   }
 }
 
-// message_id ที่ monitor_v2.py ใช้ editMessageText
-const MSG_ID = 33;
-
 async function load() {
-  document.getElementById('ico').classList.add('spin');
-  document.getElementById('btnR').disabled = true;
+  const ico = document.getElementById('ico');
+  const btn = document.getElementById('btnR');
+  ico.classList.add('spinning');
+  btn.disabled = true;
   document.getElementById('err').style.display = 'none';
 
   try {
-    // ดึง message โดยตรงด้วย forwardMessage trick -> ใช้ copyMessage เพื่อ read text
-    // Telegram ไม่มี getMessage API สำหรับ private chat โดยตรง
-    // วิธีที่ work: ส่ง forwardMessage ไปหาตัวเอง แล้วอ่าน text จาก response
     const fwd = await fetch(`https://api.telegram.org/bot${TOKEN}/forwardMessage`, {
       method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        chat_id: CHAT_ID,
-        from_chat_id: CHAT_ID,
-        message_id: MSG_ID
-      })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: CHAT_ID, from_chat_id: CHAT_ID, message_id: MSG_ID })
     });
-    const fdata = await fwd.json();
+    const fd = await fwd.json();
 
-    if (fdata.ok && fdata.result?.text) {
-      const txt = fdata.result.text;
-      // ลบ forward message ที่เพิ่งส่งออก (cleanup)
-      const newMsgId = fdata.result.message_id;
+    if (fd.ok && fd.result?.text) {
+      // cleanup forward silently
       fetch(`https://api.telegram.org/bot${TOKEN}/deleteMessage`, {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ chat_id: CHAT_ID, message_id: newMsgId })
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: CHAT_ID, message_id: fd.result.message_id })
       });
-
-      if (txt.includes('"NETMON_STATUS"')) {
-        const parsed = JSON.parse(txt);
+      const parsed = JSON.parse(fd.result.text);
+      if (parsed.NETMON_STATUS && parsed.devices) {
         render(parsed.devices);
-        document.getElementById('lastUpd').textContent = 'อัปเดต: ' + parsed.last_update;
+        document.getElementById('lastUpd').textContent = 'Last updated: ' + parsed.last_update;
         startCD();
+        ico.classList.remove('spinning');
+        btn.disabled = false;
         return;
       }
     }
-
-    showErr('⏳ ยังไม่มีข้อมูล — รอให้ monitor_v2.py รันแล้วลองใหม่');
+    showErr('⏳ No data yet — make sure monitor_v2.py is running');
     document.getElementById('main').innerHTML = skeleton();
-
   } catch(e) {
-    showErr('⚠️ ดึงข้อมูลไม่ได้: ' + e.message);
+    showErr('⚠️ Connection failed: ' + e.message);
   }
 
-  document.getElementById('ico').classList.remove('spin');
-  document.getElementById('btnR').disabled = false;
+  ico.classList.remove('spinning');
+  btn.disabled = false;
 }
 
 function showErr(msg) {
   const el = document.getElementById('err');
-  el.textContent = msg; el.style.display = 'block';
+  el.textContent = msg;
+  el.style.display = 'block';
 }
 
 document.getElementById('main').innerHTML = skeleton();
