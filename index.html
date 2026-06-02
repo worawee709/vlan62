@@ -38,7 +38,6 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* BG GRID */
 body::before {
   content: '';
   position: fixed; inset: 0; z-index: 0;
@@ -49,7 +48,6 @@ body::before {
   pointer-events: none;
 }
 
-/* HEADER */
 .header {
   position: sticky; top: 0; z-index: 100;
   background: rgba(5,8,16,0.85);
@@ -79,6 +77,9 @@ body::before {
   font-size: 11px; color: var(--text2);
   font-family: var(--mono); margin-top: 1px;
 }
+.header-controls {
+  display: flex; gap: 8px; align-items: center;
+}
 .live-badge {
   display: flex; align-items: center; gap: 5px;
   background: var(--up-soft);
@@ -89,6 +90,7 @@ body::before {
   color: var(--up);
   font-family: var(--mono);
   transition: all .4s;
+  white-space: nowrap;
 }
 .live-badge.warn {
   background: var(--down-soft);
@@ -105,10 +107,25 @@ body::before {
 @keyframes livepulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
 @keyframes warnpulse { 0%,100%{opacity:1} 50%{opacity:.2} }
 
-/* STAT CARDS */
+.btn-refresh {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 13px; font-weight: 500;
+  padding: 7px 14px; border-radius: 9px;
+  cursor: pointer;
+  display: flex; align-items: center; gap: 7px;
+  transition: background .2s, border-color .2s, transform .1s;
+}
+.btn-refresh:hover { background: var(--card); border-color: rgba(255,255,255,.2); }
+.btn-refresh:active { transform: scale(.95); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { animation: spin .6s linear infinite; }
+
 .stats {
   display: grid; grid-template-columns: repeat(3,1fr);
-  gap: 8px;
+  gap: 8px; margin-bottom: 10px;
 }
 .stat {
   background: var(--surface);
@@ -138,7 +155,27 @@ body::before {
   text-transform: uppercase; letter-spacing: .06em;
 }
 
-/* PROGRESS BAR */
+.filter-btns {
+  display: flex; gap: 6px;
+}
+.btn-filter {
+  background: transparent;
+  border: 1px solid var(--border2);
+  color: var(--text2);
+  font-family: var(--sans);
+  font-size: 12px; font-weight: 600;
+  padding: 5px 11px; border-radius: 7px;
+  cursor: pointer;
+  text-transform: uppercase; letter-spacing: .06em;
+  transition: all .2s;
+}
+.btn-filter:hover { border-color: rgba(255,255,255,.2); color: var(--text); }
+.btn-filter.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
 .prog-track {
   height: 2px;
   background: var(--surface);
@@ -160,7 +197,6 @@ body::before {
   font-family: var(--mono);
 }
 
-/* ALERTS */
 .alert-wrap { padding: 0 18px; margin-top: 12px; position: relative; z-index: 1; }
 .alert-box {
   background: var(--down-soft);
@@ -194,7 +230,6 @@ body::before {
   display: none; margin-top: 10px;
 }
 
-/* ZONES */
 .content { padding: 16px 18px 0; position: relative; z-index: 1; }
 .zone {  margin-bottom: 6px; }
 .zone-header {
@@ -216,7 +251,6 @@ body::before {
   padding: 1px 7px; border-radius: 10px;
 }
 
-/* DEVICE GRID */
 .device-grid {
   display: grid;
   grid-template-columns: repeat(2,1fr);
@@ -279,29 +313,10 @@ body::before {
 }
 .card-dur::before { content: '↓'; }
 
-/* REFRESH BUTTON */
-.btn-refresh {
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  color: var(--text);
-  font-family: var(--sans);
-  font-size: 13px; font-weight: 500;
-  padding: 7px 14px; border-radius: 9px;
-  cursor: pointer;
-  display: flex; align-items: center; gap: 7px;
-  transition: background .2s, border-color .2s, transform .1s;
-}
-.btn-refresh:hover { background: var(--card); border-color: rgba(255,255,255,.2); }
-.btn-refresh:active { transform: scale(.95); }
-@keyframes spin { to { transform: rotate(360deg); } }
-.spinning { animation: spin .6s linear infinite; }
-
-/* SKELETON */
 .skel { animation: skel 1.6s ease-in-out infinite; }
 @keyframes skel { 0%,100%{opacity:.25} 50%{opacity:.55} }
 .skel-bar { background: var(--border2); border-radius: 4px; }
 
-/* FOOTER */
 .footer {
   text-align: center; margin-top: 28px;
   font-size: 11px; color: var(--text2);
@@ -312,17 +327,16 @@ body::before {
 </head>
 <body>
 
-<!-- HEADER -->
 <div class="header">
   <div class="header-top">
     <div class="brand">
       <div class="brand-icon">📡</div>
       <div class="brand-text">
         <h1>Network Monitor</h1>
-        <p>VLAN 62 · 17 devices</p>
+        <p>VLAN 62 · 40 devices</p>
       </div>
     </div>
-    <div style="display:flex;gap:8px;align-items:center">
+    <div class="header-controls">
       <div class="live-badge" id="liveBadge">
         <span class="live-dot"></span>
         <span id="liveText">LIVE</span>
@@ -334,7 +348,6 @@ body::before {
           <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
           <path d="M16 16h5v5"/>
         </svg>
-        Refresh
       </button>
     </div>
   </div>
@@ -352,6 +365,12 @@ body::before {
       <div class="stat-num" id="nTt">—</div>
       <div class="stat-label">Total</div>
     </div>
+  </div>
+
+  <div class="filter-btns">
+    <button class="btn-filter active" onclick="setFilter('all')">All</button>
+    <button class="btn-filter" onclick="setFilter('online')">Online</button>
+    <button class="btn-filter" onclick="setFilter('offline')">Offline</button>
   </div>
 </div>
 
@@ -373,7 +392,6 @@ body::before {
 </div>
 
 <div class="content" id="main"></div>
-
 <div class="footer" id="footer"></div>
 
 <script>
@@ -382,16 +400,75 @@ const CHAT_ID = "8741011248";
 const MSG_ID  = 33;
 const REFRESH = 60;
 
+let filterMode = 'all';
+
 const ZONES = {
-  "Kitchen":     ["Main Kitchen","Cold Kitchen","Thai Kitchen","Bekery","Bar Cafe"],
-  "LT":          ["Main LT","Cold LT","Bar LT"],
-  "CB":          ["Main CB","Cold CB","Bar CB"],
-  "HL & Pool":   ["Bar HL","Bar Pool"],
-  "BJ":          ["Main BJ","Bar BJ"],
-  "Infrastructure": ["Firewall","Core Switch"]
+  "Kitchen": [
+    { name: "Main Kitchen", ip: "10.0.62.221" },
+    { name: "Cold Kitchen", ip: "10.0.62.222" },
+    { name: "Thai Kitchen", ip: "10.0.62.223" },
+    { name: "Bakery", ip: "10.0.62.224" },
+    { name: "Bar Cafe", ip: "10.0.62.225" },
+    { name: "LC Pos01", ip: "10.0.62.201" },
+    { name: "LC Pos09", ip: "10.0.62.209" },
+    { name: "iPad01 LC", ip: "10.0.62.241" }
+  ],
+  "LT": [
+    { name: "Main LT", ip: "10.0.62.226" },
+    { name: "Cold LT", ip: "10.0.62.227" },
+    { name: "Bar LT", ip: "10.0.62.228" },
+    { name: "LT POS02", ip: "10.0.62.202" },
+    { name: "LT POS12", ip: "10.0.62.212" },
+    { name: "iPad02 LT", ip: "10.0.62.242" }
+  ],
+  "RS": [
+    { name: "RSPOS03", ip: "10.0.62.203" },
+    { name: "iPad03 RS", ip: "10.0.62.243" }
+  ],
+  "CB": [
+    { name: "Main CB", ip: "10.0.62.229" },
+    { name: "Cold CB", ip: "10.0.62.230" },
+    { name: "Bar CB", ip: "10.0.62.231" },
+    { name: "CB Pos04", ip: "10.0.62.204" },
+    { name: "CB Pos11", ip: "10.0.62.211" },
+    { name: "iPad04 CB", ip: "10.0.62.244" },
+    { name: "iPad09 CB", ip: "10.0.62.249" },
+    { name: "iPad10 CB", ip: "10.0.62.250" }
+  ],
+  "HL": [
+    { name: "Bar HL", ip: "10.0.62.232" },
+    { name: "HL Pos05", ip: "10.0.62.205" },
+    { name: "iPad07 HL", ip: "10.0.62.247" }
+  ],
+  "PB": [
+    { name: "Bar Pool", ip: "10.0.62.233" },
+    { name: "PB POS06", ip: "10.0.62.206" },
+    { name: "PB Pos10", ip: "10.0.62.210" },
+    { name: "iPad08 PB", ip: "10.0.62.248" },
+    { name: "iPad05 PB", ip: "10.0.62.245" }
+  ],
+  "BJ": [
+    { name: "Main BJ", ip: "10.0.62.234" },
+    { name: "Bar BJ", ip: "10.0.62.235" },
+    { name: "BJ Pos07", ip: "10.0.62.207" },
+    { name: "BJ Pos13", ip: "10.0.62.213" },
+    { name: "iPad06 BJ", ip: "10.0.62.246" }
+  ],
+  "Other": [
+    { name: "Firewall", ip: "10.0.62.254" },
+    { name: "Core Switch", ip: "10.0.62.253" },
+    { name: "BQ Pos08", ip: "10.0.62.208" }
+  ]
 };
 
 let cdN = REFRESH, cdT = null;
+
+function setFilter(mode) {
+  filterMode = mode;
+  document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (currentData) renderWithFilter(currentData);
+}
 
 function startCD() {
   clearInterval(cdT);
@@ -425,28 +502,26 @@ function skeleton() {
   return h;
 }
 
-function render(devices) {
+let currentData = null;
+
+function renderWithFilter(devices) {
   const map = {};
-  devices.forEach(d => map[d.name] = d);
+  devices.forEach(d => map[d.ip] = d);
   let up = 0, dn = 0, downs = [], h = '';
 
-  for (const [zone, names] of Object.entries(ZONES)) {
-    const zoneDevices = names.map(n => map[n]).filter(Boolean);
-    const zoneDown = zoneDevices.filter(d => d.status.toLowerCase() !== 'up').length;
-    h += `<div class="zone">
-      <div class="zone-header">
-        <span class="zone-name">${zone}</span>
-        <span class="zone-line"></span>
-        <span class="zone-count" style="${zoneDown > 0 ? 'color:var(--down);border-color:rgba(255,77,109,.3)' : ''}">${zoneDevices.length - zoneDown}/${zoneDevices.length}</span>
-      </div>
-      <div class="device-grid">`;
-
+  for (const [zone, devices_list] of Object.entries(ZONES)) {
+    const zoneDevices = devices_list.map(d => ({ ...d, status: map[d.ip]?.status || 'unknown', down_duration: map[d.ip]?.down_duration || '' }));
+    const zoneUp = zoneDevices.filter(d => d.status.toLowerCase() === 'up').length;
+    const zoneDn = zoneDevices.length - zoneUp;
+    
+    let zoneHtml = '';
     zoneDevices.forEach(d => {
       const isUp = d.status.toLowerCase() === 'up';
-      isUp ? up++ : (dn++, downs.push(d));
-      const dur = !isUp && d.down_duration
-        ? `<div class="card-dur">${d.down_duration}</div>` : '';
-      h += `<div class="device-card ${isUp ? 'up' : 'down'}">
+      const shouldShow = filterMode === 'all' || (filterMode === 'online' && isUp) || (filterMode === 'offline' && !isUp);
+      if (!shouldShow) return;
+      if (isUp) up++; else { dn++; downs.push(d); }
+      const dur = !isUp && d.down_duration ? `<div class="card-dur">${d.down_duration}</div>` : '';
+      zoneHtml += `<div class="device-card ${isUp ? 'up' : 'down'}">
         <div class="card-accent"></div>
         <div class="card-top">
           <div class="card-name">${d.name}</div>
@@ -456,7 +531,17 @@ function render(devices) {
         ${dur}
       </div>`;
     });
-    h += `</div></div>`;
+    
+    if (zoneHtml) {
+      h += `<div class="zone">
+        <div class="zone-header">
+          <span class="zone-name">${zone}</span>
+          <span class="zone-line"></span>
+          <span class="zone-count" style="${zoneDn > 0 && filterMode !== 'online' ? 'color:var(--down);border-color:rgba(255,77,109,.3)' : ''}">${filterMode === 'online' ? zoneUp : filterMode === 'offline' ? zoneDn : zoneUp}/${zoneDevices.length}</span>
+        </div>
+        <div class="device-grid">${zoneHtml}</div>
+      </div>`;
+    }
   }
 
   document.getElementById('main').innerHTML = h;
@@ -503,7 +588,6 @@ async function load() {
     const fd = await fwd.json();
 
     if (fd.ok && fd.result?.text) {
-      // cleanup forward silently
       fetch(`https://api.telegram.org/bot${TOKEN}/deleteMessage`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -511,7 +595,8 @@ async function load() {
       });
       const parsed = JSON.parse(fd.result.text);
       if (parsed.NETMON_STATUS && parsed.devices) {
-        render(parsed.devices);
+        currentData = parsed.devices;
+        renderWithFilter(currentData);
         document.getElementById('lastUpd').textContent = 'Last updated: ' + parsed.last_update;
         startCD();
         ico.classList.remove('spinning');
