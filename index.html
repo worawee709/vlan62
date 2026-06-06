@@ -2,626 +2,892 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>VLAN62 · Network Monitor</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:        #050810;
-  --bg2:       #0a0f1e;
-  --surface:   #0f1629;
-  --card:      #141c30;
-  --border:    rgba(255,255,255,0.07);
-  --border2:   rgba(255,255,255,0.12);
-  --up:        #00e5a0;
-  --up-glow:   rgba(0,229,160,0.15);
-  --up-soft:   rgba(0,229,160,0.08);
-  --down:      #ff4d6d;
-  --down-glow: rgba(255,77,109,0.15);
-  --down-soft: rgba(255,77,109,0.07);
-  --text:      #e8eef8;
-  --text2:     #8899b4;
-  --accent:    #4d9fff;
-  --accent2:   #7b5ea7;
-  --mono:      'DM Mono', monospace;
-  --sans:      'Outfit', sans-serif;
+:root{
+  --bg:#050810;--surface:#0f1629;--card:#141c30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
+  --up:#00e5a0;--up-s:rgba(0,229,160,.08);--down:#ff4d6d;--down-s:rgba(255,77,109,.07);
+  --text:#e8eef8;--muted:#8899b4;--accent:#4d9fff;
+  --mono:'DM Mono',monospace;--sans:'Outfit',sans-serif;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--sans);
-  min-height: 100vh;
-  padding-bottom: 60px;
-  -webkit-font-smoothing: antialiased;
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding-bottom:60px;-webkit-font-smoothing:antialiased}
+body::before{content:'';position:fixed;inset:0;z-index:0;
+  background-image:linear-gradient(rgba(77,159,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(77,159,255,.025) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none}
+
+/* HEADER */
+.hdr{position:sticky;top:0;z-index:100;background:rgba(5,8,16,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 18px 12px}
+.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{width:32px;height:32px;background:linear-gradient(135deg,#4d9fff22,#7b5ea722);border:1px solid rgba(77,159,255,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
+.brand h1{font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1}
+.brand p{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:1px}
+.hdr-right{display:flex;gap:8px;align-items:center}
+
+.live{display:flex;align-items:center;gap:5px;background:var(--up-s);border:1px solid rgba(0,229,160,.2);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--up);font-family:var(--mono);white-space:nowrap;transition:all .4s}
+.live.warn{background:var(--down-s);border-color:rgba(255,77,109,.2);color:var(--down)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:lpulse 2s infinite}
+.live.warn .live-dot{animation:wpulse .8s infinite}
+@keyframes lpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+@keyframes wpulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+.btn{background:var(--surface);border:1px solid var(--border2);color:var(--text);font-family:var(--sans);font-size:12px;font-weight:600;padding:6px 13px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;white-space:nowrap}
+.btn:hover{background:var(--card);border-color:rgba(255,255,255,.2)}
+.btn:active{transform:scale(.95)}
+.btn.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinning{animation:spin .6s linear infinite}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
+.stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;position:relative;overflow:hidden}
+.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:12px 12px 0 0}
+.stat.u::after{background:linear-gradient(90deg,var(--up),transparent)}
+.stat.d::after{background:linear-gradient(90deg,var(--down),transparent)}
+.stat.t::after{background:linear-gradient(90deg,var(--accent),transparent)}
+.stat-n{font-size:26px;font-weight:800;font-family:var(--mono);line-height:1}
+.stat.u .stat-n{color:var(--up)} .stat.d .stat-n{color:var(--down)} .stat.t .stat-n{color:var(--accent)}
+.stat-l{font-size:11px;color:var(--muted);font-weight:500;margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
+
+/* TABS */
+.tabs{display:flex;gap:6px;margin-bottom:0}
+.tab{background:transparent;border:1px solid var(--border2);color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;padding:6px 13px;border-radius:8px;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.05em}
+.tab:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
+.tab.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+
+/* FILTER */
+.filter-row{display:flex;gap:6px;padding:10px 18px;border-bottom:1px solid var(--border);position:relative;z-index:1}
+.flt{background:transparent;border:1px solid var(--border2);color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.05em}
+.flt:hover{color:var(--text)}
+.flt.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+
+/* PROGRESS */
+.prog-track{height:2px;background:var(--surface);position:relative;z-index:1}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),#7b5ea7);transition:width 1s linear}
+.meta{display:flex;justify-content:space-between;align-items:center;padding:5px 18px;position:relative;z-index:1}
+.meta span{font-size:11px;color:var(--muted)}
+.meta span:last-child{font-family:var(--mono);color:var(--accent)}
+
+/* ALERTS */
+.alert-wrap{padding:0 18px;margin-top:10px;position:relative;z-index:1}
+.alert-box{background:var(--down-s);border:1px solid rgba(255,77,109,.2);border-radius:14px;padding:12px 14px;display:none}
+.alert-hd{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--down);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
+.alert-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,77,109,.1);font-size:13px}
+.alert-row:last-child{border:none;padding-bottom:0}
+.alert-dur{font-size:11px;color:var(--down);font-family:var(--mono);background:var(--down-s);padding:2px 7px;border-radius:4px}
+.err-box{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:12px;padding:11px 14px;font-size:13px;color:#fbbf24;display:none;margin-top:10px}
+
+/* DEVICE VIEW */
+#view-monitor{position:relative;z-index:1}
+.content{padding:14px 18px 0}
+.zone-hdr{display:flex;align-items:center;gap:10px;margin-bottom:9px;margin-top:20px}
+.zone-hdr:first-child{margin-top:0}
+.zone-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);white-space:nowrap}
+.zone-line{flex:1;height:1px;background:var(--border)}
+.zone-count{font-size:10px;font-family:var(--mono);color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:1px 7px;border-radius:10px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.dcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 13px 11px;position:relative;overflow:hidden;transition:border-color .3s,box-shadow .3s;cursor:pointer}
+.dcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:12px 12px 0 0}
+.dcard.up{border-color:rgba(0,229,160,.15)} .dcard.up::before{background:linear-gradient(90deg,var(--up),transparent 70%)}
+.dcard.down{border-color:rgba(255,77,109,.25);background:rgba(255,77,109,.04)} .dcard.down::before{background:linear-gradient(90deg,var(--down),transparent 70%)}
+.dcard-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
+.dcard-name{font-size:13px;font-weight:600;line-height:1.2;padding-right:4px}
+.badge{font-size:9px;font-weight:700;font-family:var(--mono);padding:3px 7px;border-radius:5px;letter-spacing:.06em;flex-shrink:0}
+.dcard.up .badge{background:var(--up-s);color:var(--up)} .dcard.down .badge{background:var(--down-s);color:var(--down)}
+.dcard-ip{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.dcard-dur{font-size:10px;color:var(--down);font-family:var(--mono);margin-top:4px}
+.dcard-dur::before{content:'↓ '}
+
+/* TOPOLOGY VIEW */
+#view-topology{display:none;position:relative;z-index:1;padding:14px 18px}
+.topo-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.topo-grid{position:relative;width:100%;min-width:0;min-height:360px;padding:12px;border:1px solid var(--border);border-radius:16px;background:var(--surface);overflow:auto;resize:both}
+.topo-canvas{position:relative;min-width:100%;min-height:320px;max-width:100%}
+.topo-grid.locked .topo-node{cursor:default}
+  .topo-node{position:absolute;display:inline-flex;flex-direction:column;align-items:center;width:96px;height:100px;background:var(--card);border:2px solid var(--border);border-radius:12px;padding:8px 6px;cursor:grab;transition:all .2s;touch-action:none;box-sizing:border-box}
+  .topo-edit-btn{position:absolute;right:6px;top:6px;background:transparent;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:4px;border-radius:6px}
+  .topo-edit-btn:hover{background:rgba(255,255,255,0.03);color:var(--text)}
+.topo-node.dragging{cursor:grabbing;opacity:.85;}
+.topo-node.up{border-color:rgba(0,229,160,.4);box-shadow:0 0 12px rgba(0,229,160,.1)}
+.topo-node.down{border-color:rgba(255,77,109,.5);background:rgba(255,77,109,.06);box-shadow:0 0 14px rgba(255,77,109,.12);animation:dnblink 2s infinite}
+@keyframes dnblink{0%,100%{box-shadow:0 0 14px rgba(255,77,109,.12)}50%{box-shadow:0 0 20px rgba(255,77,109,.3)}}
+.topo-icon{font-size:20px;margin-bottom:4px}
+.topo-name{font-size:10px;font-weight:600;text-align:center;line-height:1.2;word-break:break-word;color:var(--text)}
+.topo-ip{font-size:9px;color:var(--muted);font-family:var(--mono);margin-top:2px}
+.topo-status{font-size:9px;font-weight:700;font-family:var(--mono);margin-top:3px;padding:1px 6px;border-radius:3px}
+.topo-node.up .topo-status{background:var(--up-s);color:var(--up)}
+.topo-node.down .topo-status{background:var(--down-s);color:var(--down)}
+
+@media (max-width: 980px) {
+  .hdr-top {flex-wrap:wrap;gap:10px}
+  .hdr-right {width:100%;justify-content:flex-start}
+  .stats {grid-template-columns:repeat(2,minmax(0,1fr))}
+  .tabs {flex-wrap:wrap}
+  .filter-row {padding:10px 12px}
+  .content {padding:14px 12px 0}
+  .zone-hdr {flex-wrap:wrap;gap:8px}
+  .grid {grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+  .topo-actions {justify-content:flex-start}
 }
 
-body::before {
-  content: '';
-  position: fixed; inset: 0; z-index: 0;
-  background-image:
-    linear-gradient(rgba(77,159,255,0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(77,159,255,0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-  pointer-events: none;
+@media (max-width: 640px) {
+  body {padding-bottom:80px}
+  .hdr{padding:12px 12px 10px}
+  .brand p {display:none}
+  .stats {grid-template-columns:1fr;gap:8px}
+  .alert-wrap{padding:0 12px}
+  .tabs, .filter-row {padding:0 12px;gap:6px}
+  .tab, .flt, .btn {font-size:11px;padding:8px 10px}
+  .meta{padding:5px 12px;flex-direction:column;align-items:flex-start;gap:4px}
+  .zone-hdr{align-items:flex-start}
+  .grid {grid-template-columns:1fr}
+  .topo-grid{padding:10px;min-height:260px;resize:none}
+  .topo-canvas{min-height:280px}
+  .topo-node{width:84px;height:90px;padding:6px 5px}
+  .topo-icon{font-size:18px}
+  .topo-name{font-size:9px}
+  .topo-ip{font-size:8px}
+  .topo-status{font-size:8px;padding:1px 5px}
 }
 
-.header {
-  position: sticky; top: 0; z-index: 100;
-  background: rgba(5,8,16,0.85);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
-  padding: 14px 18px 12px;
-}
-.header-top {
-  display: flex; align-items: center;
-  justify-content: space-between;
-  margin-bottom: 14px;
-}
-.brand { display: flex; align-items: center; gap: 10px; }
-.brand-icon {
-  width: 32px; height: 32px;
-  background: linear-gradient(135deg, #4d9fff22, #7b5ea722);
-  border: 1px solid rgba(77,159,255,0.25);
-  border-radius: 8px;
-  display: flex; align-items: center; justify-content: center;
-  font-size: 14px;
-}
-.brand-text h1 {
-  font-size: 15px; font-weight: 700;
-  letter-spacing: -0.01em; line-height: 1;
-}
-.brand-text p {
-  font-size: 11px; color: var(--text2);
-  font-family: var(--mono); margin-top: 1px;
-}
-.header-controls {
-  display: flex; gap: 8px; align-items: center;
-}
-.live-badge {
-  display: flex; align-items: center; gap: 5px;
-  background: var(--up-soft);
-  border: 1px solid rgba(0,229,160,0.2);
-  border-radius: 20px;
-  padding: 4px 10px;
-  font-size: 11px; font-weight: 600;
-  color: var(--up);
-  font-family: var(--mono);
-  transition: all .4s;
-  white-space: nowrap;
-}
-.live-badge.warn {
-  background: var(--down-soft);
-  border-color: rgba(255,77,109,0.2);
-  color: var(--down);
-}
-.live-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: livepulse 2s infinite;
-}
-.live-badge.warn .live-dot { animation: warnpulse 0.8s infinite; }
-@keyframes livepulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
-@keyframes warnpulse { 0%,100%{opacity:1} 50%{opacity:.2} }
-
-.btn-refresh {
-  background: var(--surface);
-  border: 1px solid var(--border2);
-  color: var(--text);
-  font-family: var(--sans);
-  font-size: 13px; font-weight: 500;
-  padding: 7px 14px; border-radius: 9px;
-  cursor: pointer;
-  display: flex; align-items: center; gap: 7px;
-  transition: background .2s, border-color .2s, transform .1s;
-}
-.btn-refresh:hover { background: var(--card); border-color: rgba(255,255,255,.2); }
-.btn-refresh:active { transform: scale(.95); }
-@keyframes spin { to { transform: rotate(360deg); } }
-.spinning { animation: spin .6s linear infinite; }
-
-.stats {
-  display: grid; grid-template-columns: repeat(3,1fr);
-  gap: 8px; margin-bottom: 10px;
-}
-.stat {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 10px 12px;
-  position: relative; overflow: hidden;
-}
-.stat::after {
-  content: '';
-  position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  border-radius: 12px 12px 0 0;
-}
-.stat.up::after   { background: linear-gradient(90deg, var(--up), transparent); }
-.stat.down::after { background: linear-gradient(90deg, var(--down), transparent); }
-.stat.total::after{ background: linear-gradient(90deg, var(--accent), transparent); }
-.stat-num {
-  font-size: 28px; font-weight: 800;
-  font-family: var(--mono); line-height: 1;
-}
-.stat.up   .stat-num { color: var(--up); }
-.stat.down .stat-num { color: var(--down); }
-.stat.total .stat-num { color: var(--accent); }
-.stat-label {
-  font-size: 11px; color: var(--text2);
-  font-weight: 500; margin-top: 2px;
-  text-transform: uppercase; letter-spacing: .06em;
-}
-
-.filter-btns {
-  display: flex; gap: 6px;
-}
-.btn-filter {
-  background: transparent;
-  border: 1px solid var(--border2);
-  color: var(--text2);
-  font-family: var(--sans);
-  font-size: 12px; font-weight: 600;
-  padding: 5px 11px; border-radius: 7px;
-  cursor: pointer;
-  text-transform: uppercase; letter-spacing: .06em;
-  transition: all .2s;
-}
-.btn-filter:hover { border-color: rgba(255,255,255,.2); color: var(--text); }
-.btn-filter.active {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--bg);
-}
-
-.prog-track {
-  height: 2px;
-  background: var(--surface);
-  position: relative; z-index: 1;
-}
-.prog-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--accent), #7b5ea7);
-  transition: width 1s linear;
-}
-.meta-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 6px 18px;
-  position: relative; z-index: 1;
-}
-.meta-time { font-size: 11px; color: var(--text2); }
-.meta-cd {
-  font-size: 11px; color: var(--accent);
-  font-family: var(--mono);
-}
-
-.alert-wrap { padding: 0 18px; margin-top: 12px; position: relative; z-index: 1; }
-.alert-box {
-  background: var(--down-soft);
-  border: 1px solid rgba(255,77,109,0.2);
-  border-radius: 14px; padding: 12px 14px;
-  display: none;
-}
-.alert-head {
-  display: flex; align-items: center; gap: 7px;
-  font-size: 12px; font-weight: 700;
-  color: var(--down);
-  text-transform: uppercase; letter-spacing: .08em;
-  margin-bottom: 8px;
-}
-.alert-item {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 5px 0;
-  border-bottom: 1px solid rgba(255,77,109,0.1);
-  font-size: 13px;
-}
-.alert-item:last-child { border: none; padding-bottom: 0; }
-.alert-name { font-weight: 600; }
-.alert-ip   { font-size: 11px; color: var(--text2); font-family: var(--mono); }
-.alert-dur  { font-size: 11px; color: var(--down); font-family: var(--mono); background: var(--down-soft); padding: 2px 7px; border-radius: 4px; }
-
-.err-box {
-  background: rgba(251,191,36,.07);
-  border: 1px solid rgba(251,191,36,.25);
-  border-radius: 12px; padding: 11px 14px;
-  font-size: 13px; color: #fbbf24;
-  display: none; margin-top: 10px;
-}
-
-.content { padding: 16px 18px 0; position: relative; z-index: 1; }
-.zone {  margin-bottom: 6px; }
-.zone-header {
-  display: flex; align-items: center; gap: 10px;
-  margin-bottom: 9px; margin-top: 20px;
-}
-.zone-header:first-child { margin-top: 0; }
-.zone-name {
-  font-size: 11px; font-weight: 700;
-  text-transform: uppercase; letter-spacing: .12em;
-  color: var(--text2);
-  white-space: nowrap;
-}
-.zone-line { flex: 1; height: 1px; background: var(--border); }
-.zone-count {
-  font-size: 10px; font-family: var(--mono);
-  color: var(--text2); background: var(--surface);
-  border: 1px solid var(--border);
-  padding: 1px 7px; border-radius: 10px;
-}
-
-.device-grid {
-  display: grid;
-  grid-template-columns: repeat(2,1fr);
-  gap: 8px;
-}
-.device-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 12px 13px 11px;
-  position: relative; overflow: hidden;
-  transition: transform .15s, border-color .3s, box-shadow .3s;
-  cursor: default;
-}
-.device-card:active { transform: scale(.97); }
-.device-card.up {
-  border-color: rgba(0,229,160,0.15);
-}
-.device-card.up:hover {
-  border-color: rgba(0,229,160,0.3);
-  box-shadow: 0 0 20px rgba(0,229,160,0.06);
-}
-.device-card.down {
-  border-color: rgba(255,77,109,0.25);
-  background: rgba(255,77,109,0.04);
-  box-shadow: 0 0 20px rgba(255,77,109,0.05);
-}
-.card-accent {
-  position: absolute; top: 0; left: 0; right: 0; height: 2px;
-  border-radius: 12px 12px 0 0;
-}
-.device-card.up   .card-accent { background: linear-gradient(90deg, var(--up), transparent 70%); }
-.device-card.down .card-accent { background: linear-gradient(90deg, var(--down), transparent 70%); }
-
-.card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 6px; }
-.card-name {
-  font-size: 13px; font-weight: 600;
-  line-height: 1.2;
-  padding-right: 4px;
-}
-.card-badge {
-  font-size: 9px; font-weight: 700;
-  font-family: var(--mono);
-  padding: 3px 7px; border-radius: 5px;
-  letter-spacing: .06em; flex-shrink: 0;
-  margin-top: 1px;
-}
-.device-card.up   .card-badge { background: var(--up-soft);   color: var(--up); }
-.device-card.down .card-badge { background: var(--down-soft); color: var(--down); }
-
-.card-ip {
-  font-size: 11px; color: var(--text2);
-  font-family: var(--mono);
-}
-.card-dur {
-  font-size: 10px; color: var(--down);
-  font-family: var(--mono);
-  margin-top: 4px;
-  display: flex; align-items: center; gap: 4px;
-}
-.card-dur::before { content: '↓'; }
-
-.skel { animation: skel 1.6s ease-in-out infinite; }
-@keyframes skel { 0%,100%{opacity:.25} 50%{opacity:.55} }
-.skel-bar { background: var(--border2); border-radius: 4px; }
-
-.footer {
-  text-align: center; margin-top: 28px;
-  font-size: 11px; color: var(--text2);
-  font-family: var(--mono);
-  position: relative; z-index: 1;
-}
+/* SKELETON */
+.skel{animation:sk 1.6s ease-in-out infinite}
+@keyframes sk{0%,100%{opacity:.25}50%{opacity:.55}}
+.skel-bar{background:var(--border2);border-radius:4px}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="header-top">
+<div class="hdr">
+  <div class="hdr-top">
     <div class="brand">
       <div class="brand-icon">📡</div>
-      <div class="brand-text">
+      <div>
         <h1>Network Monitor</h1>
         <p>VLAN 62 · 40 devices</p>
       </div>
     </div>
-    <div class="header-controls">
-      <div class="live-badge" id="liveBadge">
-        <span class="live-dot"></span>
-        <span id="liveText">LIVE</span>
-      </div>
-      <button class="btn-refresh" id="btnR" onclick="load()">
+    <div class="hdr-right">
+      <div class="live" id="liveBadge"><span class="live-dot"></span><span id="liveText">LIVE</span></div>
+      <button class="btn" id="btnR" onclick="doLoad()">
         <svg id="ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
-          <path d="M3 3v5h5"/>
-          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
-          <path d="M16 16h5v5"/>
+          <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
+          <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>
         </svg>
       </button>
     </div>
   </div>
 
   <div class="stats">
-    <div class="stat up">
-      <div class="stat-num" id="nUp">—</div>
-      <div class="stat-label">Online</div>
-    </div>
-    <div class="stat down">
-      <div class="stat-num" id="nDn">—</div>
-      <div class="stat-label">Offline</div>
-    </div>
-    <div class="stat total">
-      <div class="stat-num" id="nTt">—</div>
-      <div class="stat-label">Total</div>
-    </div>
+    <div class="stat u"><div class="stat-n" id="nUp">—</div><div class="stat-l">Online</div></div>
+    <div class="stat d"><div class="stat-n" id="nDn">—</div><div class="stat-l">Offline</div></div>
+    <div class="stat t"><div class="stat-n" id="nTt">—</div><div class="stat-l">Total</div></div>
   </div>
 
-  <div class="filter-btns">
-    <button class="btn-filter active" onclick="setFilter('all')">All</button>
-    <button class="btn-filter" onclick="setFilter('online')">Online</button>
-    <button class="btn-filter" onclick="setFilter('offline')">Offline</button>
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('monitor')">Monitor</button>
+    <button class="tab" onclick="switchTab('topology')">Topology</button>
+    <button class="tab" onclick="switchTab('history')">History</button>
   </div>
+</div>
+
+<div id="filter-row" class="filter-row">
+  <button class="flt active" onclick="setFilter('all')">All</button>
+  <button class="flt" onclick="setFilter('online')">Online</button>
+  <button class="flt" onclick="setFilter('offline')">Offline</button>
 </div>
 
 <div class="prog-track"><div class="prog-fill" id="prog" style="width:100%"></div></div>
-<div class="meta-row">
-  <span class="meta-time" id="lastUpd">Loading...</span>
-  <span class="meta-cd" id="cdTxt">—</span>
-</div>
+<div class="meta"><span id="lastUpd">Loading...</span><span id="cdTxt">—</span></div>
 
 <div class="alert-wrap">
   <div class="err-box" id="err"></div>
   <div class="alert-box" id="alertBox">
-    <div class="alert-head">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-      Offline Devices
+    <div class="alert-hd">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>Offline Devices
     </div>
     <div id="alertBody"></div>
   </div>
 </div>
 
-<div class="content" id="main"></div>
-<div class="footer" id="footer"></div>
+<div id="view-monitor">
+  <div class="content" id="main"></div>
+</div>
+
+<div id="view-topology">
+  <div class="topo-actions" style="display:flex;justify-content:flex-end;padding:0 18px 10px;gap:8px">
+    <button class="btn" onclick="openTopologyIconEditor()">Edit</button>
+    <button class="btn" id="topoLockBtn" onclick="toggleTopologyLock()">Lock positions</button>
+    <button class="btn" onclick="autoFitTopologyCanvas()">Auto fit</button>
+  <div class="topo-grid" id="topoGrid"></div>
+</div>
+
+<div id="view-history" style="display:none;position:relative;z-index:1;padding:14px 18px">
+  <div style="margin-bottom:16px">
+    <label style="display:block;margin-bottom:8px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase">Select Device</label>
+    <select id="historyDeviceSelect" onchange="showDeviceHistoryDetail()" style="width:100%;max-width:300px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:var(--surface);color:var(--text);font-family:var(--sans);font-size:14px;cursor:pointer">
+      <option value="">-- Choose a device --</option>
+    </select>
+  </div>
+  <div id="historyContent"></div>
+</div>
 
 <script>
 const TOKEN   = "8830819103:AAHrzzpGlJR2GY0yK2k-pw8SIENeBiBteI4";
 const CHAT_ID = "8741011248";
-const MSG_ID  = 33;
+const STATUS_MID = 33;
+// ← เปลี่ยนตรงนี้หลังจากรัน monitor_v3.py แล้วได้ log message_id ใหม่
+let LOG_MID = 221;
+
 const REFRESH = 60;
-
-let filterMode = 'all';
-
-const ZONES = {
-  "Kitchen": [
-    { name: "Main Kitchen", ip: "10.0.62.221" },
-    { name: "Cold Kitchen", ip: "10.0.62.222" },
-    { name: "Thai Kitchen", ip: "10.0.62.223" },
-    { name: "Bakery", ip: "10.0.62.224" },
-    { name: "Bar Cafe", ip: "10.0.62.225" },
-    { name: "LC Pos01", ip: "10.0.62.201" },
-    { name: "LC Pos09", ip: "10.0.62.209" },
-    { name: "iPad01 LC", ip: "10.0.62.241" }
-  ],
-  "LT": [
-    { name: "Main LT", ip: "10.0.62.226" },
-    { name: "Cold LT", ip: "10.0.62.227" },
-    { name: "Bar LT", ip: "10.0.62.228" },
-    { name: "LT POS02", ip: "10.0.62.202" },
-    { name: "LT POS12", ip: "10.0.62.212" },
-    { name: "iPad02 LT", ip: "10.0.62.242" }
-  ],
-  "RS": [
-    { name: "RSPOS03", ip: "10.0.62.203" },
-    { name: "iPad03 RS", ip: "10.0.62.243" }
-  ],
-  "CB": [
-    { name: "Main CB", ip: "10.0.62.229" },
-    { name: "Cold CB", ip: "10.0.62.230" },
-    { name: "Bar CB", ip: "10.0.62.231" },
-    { name: "CB Pos04", ip: "10.0.62.204" },
-    { name: "CB Pos11", ip: "10.0.62.211" },
-    { name: "iPad04 CB", ip: "10.0.62.244" },
-    { name: "iPad09 CB", ip: "10.0.62.249" },
-    { name: "iPad10 CB", ip: "10.0.62.250" }
-  ],
-  "HL": [
-    { name: "Bar HL", ip: "10.0.62.232" },
-    { name: "HL Pos05", ip: "10.0.62.205" },
-    { name: "iPad07 HL", ip: "10.0.62.247" }
-  ],
-  "PB": [
-    { name: "Bar Pool", ip: "10.0.62.233" },
-    { name: "PB POS06", ip: "10.0.62.206" },
-    { name: "PB Pos10", ip: "10.0.62.210" },
-    { name: "iPad08 PB", ip: "10.0.62.248" },
-    { name: "iPad05 PB", ip: "10.0.62.245" }
-  ],
-  "BJ": [
-    { name: "Main BJ", ip: "10.0.62.234" },
-    { name: "Bar BJ", ip: "10.0.62.235" },
-    { name: "BJ Pos07", ip: "10.0.62.207" },
-    { name: "BJ Pos13", ip: "10.0.62.213" },
-    { name: "iPad06 BJ", ip: "10.0.62.246" }
-  ],
-  "Other": [
-    { name: "Firewall", ip: "10.0.62.254" },
-    { name: "Core Switch", ip: "10.0.62.253" },
-    { name: "BQ Pos08", ip: "10.0.62.208" }
-  ]
-};
-
+let filterMode = 'all', logFilterMode = 'all', activeTab = 'monitor';
+let currentDevices = [], currentEvents = [];
+let topologyLocked = false;
 let cdN = REFRESH, cdT = null;
 
-function setFilter(mode) {
-  filterMode = mode;
-  document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  if (currentData) renderWithFilter(currentData);
+const ZONES = {
+  "Kitchen":    [{ name:"Main Kitchen",ip:"10.0.62.221"},{name:"Cold Kitchen",ip:"10.0.62.222"},{name:"Thai Kitchen",ip:"10.0.62.223"},{name:"Bakery",ip:"10.0.62.224"},{name:"Bar Cafe",ip:"10.0.62.225"},{name:"LC Pos01",ip:"10.0.62.201"},{name:"LC Pos09",ip:"10.0.62.209"},{name:"iPad01 LC",ip:"10.0.62.241"}],
+  "LT":         [{name:"Main LT",ip:"10.0.62.226"},{name:"Cold LT",ip:"10.0.62.227"},{name:"Bar LT",ip:"10.0.62.228"},{name:"LT POS02",ip:"10.0.62.202"},{name:"LT POS12",ip:"10.0.62.212"},{name:"iPad02 LT",ip:"10.0.62.242"}],
+  "RS":         [{name:"RSPOS03",ip:"10.0.62.203"},{name:"iPad03 RS",ip:"10.0.62.243"}],
+  "CB":         [{name:"Main CB",ip:"10.0.62.229"},{name:"Cold CB",ip:"10.0.62.230"},{name:"Bar CB",ip:"10.0.62.231"},{name:"CB Pos04",ip:"10.0.62.204"},{name:"CB Pos11",ip:"10.0.62.211"},{name:"iPad04 CB",ip:"10.0.62.244"},{name:"iPad09 CB",ip:"10.0.62.249"},{name:"iPad10 CB",ip:"10.0.62.250"}],
+  "HL":         [{name:"Bar HL",ip:"10.0.62.232"},{name:"HL Pos05",ip:"10.0.62.205"},{name:"iPad07 HL",ip:"10.0.62.247"}],
+  "PB":         [{name:"Bar Pool",ip:"10.0.62.233"},{name:"PB POS06",ip:"10.0.62.206"},{name:"PB Pos10",ip:"10.0.62.210"},{name:"iPad08 PB",ip:"10.0.62.248"},{name:"iPad05 PB",ip:"10.0.62.245"}],
+  "BJ":         [{name:"Main BJ",ip:"10.0.62.234"},{name:"Bar BJ",ip:"10.0.62.235"},{name:"BJ Pos07",ip:"10.0.62.207"},{name:"BJ Pos13",ip:"10.0.62.213"},{name:"iPad06 BJ",ip:"10.0.62.246"}],
+  "Other":      [{name:"Firewall",ip:"10.0.62.254"},{name:"Core Switch",ip:"10.0.62.253"},{name:"BQ Pos08",ip:"10.0.62.208"}]
+};
+
+const ICONS = {
+  Firewall:'🔥', 'Core Switch':'🔀',
+  default:'💻'
+};
+function inferDeviceType(name){
+  if (name.includes('Firewall')) return 'firewall';
+  if (name.includes('Core Switch') || name.includes('Switch')) return 'switch';
+  if (name.includes('iPad') || name.includes('POS') || name.includes('Pos')) return 'tablet';
+  if (name.includes('Printer') || name.includes('Print') || name.includes('PRT')) return 'printer';
+  return 'computer';
+}
+function iconForType(type){
+  return type==='firewall' ? '🔥' : type==='switch' ? '🔀' : type==='printer' ? '🖨️' : type==='tablet' ? '📱' : '💻';
+}
+function iconFor(name){
+  const type = loadDeviceTypes()[name] || inferDeviceType(name);
+  return iconForType(type);
 }
 
+// ── TABS ──────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('view-monitor').style.display  = tab==='monitor'  ? 'block' : 'none';
+  document.getElementById('view-topology').style.display = tab==='topology' ? 'block' : 'none';
+  document.getElementById('view-history').style.display  = tab==='history' ? 'block' : 'none';
+  document.getElementById('filter-row').style.display    = tab==='monitor'  ? 'flex'  : 'none';
+  document.querySelector('.prog-track').style.display    = tab==='monitor'  ? 'block' : 'none';
+  document.querySelector('.meta').style.display          = tab==='monitor'  ? 'flex'  : 'none';
+  document.querySelector('.alert-wrap').style.display    = tab==='monitor'  ? 'block' : 'none';
+  if (tab==='topology' && currentDevices.length) renderTopology(currentDevices);
+  if (tab==='history') initHistoryTab();
+}
+
+// ── FILTER ────────────────────────────────────────
+function setFilter(mode) {
+  filterMode = mode;
+  document.querySelectorAll('.filter-row .flt').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (currentDevices.length) renderMonitor(currentDevices);
+}
+
+// ── COUNTDOWN ─────────────────────────────────────
 function startCD() {
-  clearInterval(cdT);
-  cdN = REFRESH;
+  clearInterval(cdT); cdN = REFRESH;
   cdT = setInterval(() => {
     cdN--;
-    document.getElementById('prog').style.width = (cdN / REFRESH * 100) + '%';
-    document.getElementById('cdTxt').textContent = `Next refresh in ${cdN}s`;
-    if (cdN <= 0) load();
+    document.getElementById('prog').style.width = (cdN/REFRESH*100)+'%';
+    document.getElementById('cdTxt').textContent = `Refresh in ${cdN}s`;
+    if (cdN<=0) doLoad();
   }, 1000);
 }
 
-function skeleton() {
-  let h = '';
-  for (const [z, ns] of Object.entries(ZONES)) {
-    h += `<div class="zone">
-      <div class="zone-header">
-        <span class="zone-name">${z}</span>
-        <span class="zone-line"></span>
-        <span class="zone-count">${ns.length}</span>
-      </div>
-      <div class="device-grid">`;
-    ns.forEach(() => {
-      h += `<div class="device-card skel" style="height:72px">
-        <div class="skel-bar" style="width:60%;height:13px;margin-bottom:8px"></div>
-        <div class="skel-bar" style="width:45%;height:11px"></div>
-      </div>`;
+// ── RENDER MONITOR ────────────────────────────────
+function renderMonitor(devices) {
+  const map = {}; devices.forEach(d => map[d.ip] = d);
+  let up=0, dn=0, downs=[], h='';
+
+  for (const [zone, list] of Object.entries(ZONES)) {
+    const aliases = loadDeviceAliases();
+    const zd = list.map(d => ({...d, status: map[d.ip]?.status||'unknown', down_duration: map[d.ip]?.down_duration||'', display_name: aliases[d.ip] || d.name}));
+    const zUp = zd.filter(d=>d.status==='up').length;
+    const zDn = zd.length - zUp;
+    let zh='';
+    zd.forEach(d => {
+      const isUp = d.status==='up';
+      const show = filterMode==='all'||(filterMode==='online'&&isUp)||(filterMode==='offline'&&!isUp);
+      if (!show) return;
+      isUp?up++:(dn++,downs.push(d));
+      const dur = !isUp&&d.down_duration?`<div class="dcard-dur">${d.down_duration}</div>`:'';
+      zh += `<div class="dcard ${isUp?'up':'down'}" style="cursor:pointer" onclick="openDeviceModal(${JSON.stringify(d.name)}, ${JSON.stringify(d.ip)})"><div class="dcard-top"><div class="dcard-name">${d.display_name}</div><span class="badge">${isUp?'UP':'DOWN'}</span></div><div class="dcard-ip">${d.ip}</div>${dur}</div>`;
     });
-    h += `</div></div>`;
-  }
-  return h;
-}
-
-let currentData = null;
-
-function renderWithFilter(devices) {
-  const map = {};
-  devices.forEach(d => map[d.ip] = d);
-  let up = 0, dn = 0, downs = [], h = '';
-
-  for (const [zone, devices_list] of Object.entries(ZONES)) {
-    const zoneDevices = devices_list.map(d => ({ ...d, status: map[d.ip]?.status || 'unknown', down_duration: map[d.ip]?.down_duration || '' }));
-    const zoneUp = zoneDevices.filter(d => d.status.toLowerCase() === 'up').length;
-    const zoneDn = zoneDevices.length - zoneUp;
-    
-    let zoneHtml = '';
-    zoneDevices.forEach(d => {
-      const isUp = d.status.toLowerCase() === 'up';
-      const shouldShow = filterMode === 'all' || (filterMode === 'online' && isUp) || (filterMode === 'offline' && !isUp);
-      if (!shouldShow) return;
-      if (isUp) up++; else { dn++; downs.push(d); }
-      const dur = !isUp && d.down_duration ? `<div class="card-dur">${d.down_duration}</div>` : '';
-      zoneHtml += `<div class="device-card ${isUp ? 'up' : 'down'}">
-        <div class="card-accent"></div>
-        <div class="card-top">
-          <div class="card-name">${d.name}</div>
-          <span class="card-badge">${isUp ? 'UP' : 'DOWN'}</span>
-        </div>
-        <div class="card-ip">${d.ip}</div>
-        ${dur}
-      </div>`;
-    });
-    
-    if (zoneHtml) {
-      h += `<div class="zone">
-        <div class="zone-header">
-          <span class="zone-name">${zone}</span>
-          <span class="zone-line"></span>
-          <span class="zone-count" style="${zoneDn > 0 && filterMode !== 'online' ? 'color:var(--down);border-color:rgba(255,77,109,.3)' : ''}">${filterMode === 'online' ? zoneUp : filterMode === 'offline' ? zoneDn : zoneUp}/${zoneDevices.length}</span>
-        </div>
-        <div class="device-grid">${zoneHtml}</div>
-      </div>`;
-    }
+    if (zh) h+=`<div class="zone-hdr"><span class="zone-name">${zone}</span><span class="zone-line"></span><span class="zone-count" style="${zDn>0&&filterMode!=='online'?'color:var(--down);border-color:rgba(255,77,109,.3)':''}">${filterMode==='offline'?zDn:zUp}/${zd.length}</span></div><div class="grid">${zh}</div>`;
   }
 
   document.getElementById('main').innerHTML = h;
   document.getElementById('nUp').textContent = up;
   document.getElementById('nDn').textContent = dn;
-  document.getElementById('nTt').textContent = up + dn;
-  document.title = dn > 0 ? `⚠️ ${dn} Offline · VLAN62` : `✅ All Online · VLAN62`;
-  document.getElementById('footer').textContent = `VLAN62 Network Monitor · ${up + dn} devices tracked`;
+  document.getElementById('nTt').textContent = up+dn;
+  document.title = dn>0?`⚠️ ${dn} Offline · VLAN62`:'✅ All Online · VLAN62';
 
   const badge = document.getElementById('liveBadge');
-  const liveText = document.getElementById('liveText');
-  if (dn > 0) {
-    badge.className = 'live-badge warn';
-    liveText.textContent = `${dn} DOWN`;
-    document.getElementById('alertBody').innerHTML = downs.map(d => `
-      <div class="alert-item">
-        <div>
-          <div class="alert-name">${d.name}</div>
-          <div class="alert-ip">${d.ip}</div>
-        </div>
-        ${d.down_duration ? `<span class="alert-dur">${d.down_duration}</span>` : ''}
-      </div>`).join('');
-    document.getElementById('alertBox').style.display = 'block';
+  if (dn>0) {
+    badge.className='live warn';
+    document.getElementById('liveText').textContent=`${dn} DOWN`;
+    renderOfflineAlert(downs);
   } else {
-    badge.className = 'live-badge';
-    liveText.textContent = 'ALL ONLINE';
-    document.getElementById('alertBox').style.display = 'none';
+    badge.className='live';
+    document.getElementById('liveText').textContent='ALL ONLINE';
+    renderOfflineAlert([]);
   }
 }
 
-async function load() {
-  const ico = document.getElementById('ico');
-  const btn = document.getElementById('btnR');
-  ico.classList.add('spinning');
-  btn.disabled = true;
+function renderOfflineAlert(downs) {
+  if (downs.length > 0) {
+    document.getElementById('alertBody').innerHTML = downs.map(d=>`<div class="alert-row"><div><div style="font-weight:600">${d.name}</div><div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${d.ip}</div></div>${d.down_duration?`<span class="alert-dur">${d.down_duration}</span>`:''}</div>`).join('');
+    document.getElementById('alertBox').style.display='block';
+  } else {
+    document.getElementById('alertBox').style.display='none';
+  }
+}
+
+// ── RENDER TOPOLOGY ───────────────────────────────
+function renderTopology(devices) {
+  const map = {}; devices.forEach(d => map[d.ip] = d);
+  topologyLocked = loadTopologyLock();
+  updateTopologyLockButton();
+  const positions = loadTopologyPositions();
+  const aliases = loadDeviceAliases();
+  const flat = Object.values(ZONES).flat();
+  const savedCanvas = loadTopologyCanvas();
+  const canvas = savedCanvas && savedCanvas.w && savedCanvas.h ? savedCanvas : computeAutoTopologyCanvasSize(flat, positions);
+  if (!savedCanvas || !savedCanvas.w || !savedCanvas.h) saveTopologyCanvas(canvas);
+  const downs = flat.filter(d => map[d.ip]?.status === 'down').map(d => ({
+    name: d.name,
+    ip: d.ip,
+    down_duration: map[d.ip]?.down_duration || ''
+  }));
+  let nodesHtml = '';
+  flat.forEach((d, idx) => {
+    const displayName = aliases[d.ip] || d.name;
+    const s = map[d.ip]?.status||'unknown';
+    const isUp = s==='up';
+    const dur = !isUp&&map[d.ip]?.down_duration?map[d.ip].down_duration:'';
+    const pos = positions[d.ip] || defaultTopologyPosition(idx);
+    nodesHtml+=`<div class="topo-node ${isUp?'up':'down'}" data-ip="${d.ip}" style="left:${pos.x}px;top:${pos.y}px" ondblclick="openDeviceModal(${JSON.stringify(d.name)}, ${JSON.stringify(d.ip)})" title="${displayName}\n${d.ip}${dur? '\nDown: '+dur:''}\n(ดับ/กลับมา: Double-click)">
+        <div class="topo-icon">${iconFor(d.name)}</div>
+        <div class="topo-name">${displayName}</div>
+        <div class="topo-ip">${d.ip.split('.').pop()}</div>
+        <div class="topo-status">${isUp?'UP':'DOWN'}</div>
+        ${dur?`<div style="font-size:9px;color:var(--down);margin-top:2px;font-family:var(--mono)">${dur}</div>`:''}
+      </div>`;
+  });
+  const grid = document.getElementById('topoGrid');
+  grid.innerHTML = `<div class="topo-canvas" id="topoCanvas" style="width:${canvas.w}px;height:${canvas.h}px;position:relative">${nodesHtml}</div>`;
+  grid.classList.toggle('locked', topologyLocked);
+  initTopologyDrag();
+  updateCanvasLabel();
+  renderOfflineAlert(downs);
+}
+
+// ── FETCH DATA ────────────────────────────────────
+async function fetchMessage(msgId) {
+  const fwd = await fetch(`https://api.telegram.org/bot${TOKEN}/forwardMessage`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({chat_id:CHAT_ID, from_chat_id:CHAT_ID, message_id:msgId})
+  });
+  const fd = await fwd.json();
+  if (fd.ok && fd.result?.text) {
+    fetch(`https://api.telegram.org/bot${TOKEN}/deleteMessage`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chat_id:CHAT_ID, message_id:fd.result.message_id})
+    });
+    return fd.result.text;
+  }
+  return null;
+}
+
+async function doLoad() {
+  document.getElementById('ico').classList.add('spinning');
+  document.getElementById('btnR').disabled = true;
   document.getElementById('err').style.display = 'none';
 
   try {
-    const fwd = await fetch(`https://api.telegram.org/bot${TOKEN}/forwardMessage`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ chat_id: CHAT_ID, from_chat_id: CHAT_ID, message_id: MSG_ID })
-    });
-    const fd = await fwd.json();
-
-    if (fd.ok && fd.result?.text) {
-      fetch(`https://api.telegram.org/bot${TOKEN}/deleteMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: CHAT_ID, message_id: fd.result.message_id })
-      });
-      const parsed = JSON.parse(fd.result.text);
-      if (parsed.NETMON_STATUS && parsed.devices) {
-        currentData = parsed.devices;
-        renderWithFilter(currentData);
-        document.getElementById('lastUpd').textContent = 'Last updated: ' + parsed.last_update;
-        startCD();
-        ico.classList.remove('spinning');
-        btn.disabled = false;
-        return;
+    // fetch status
+    const sText = await fetchMessage(STATUS_MID);
+    if (sText) {
+      const p = JSON.parse(sText);
+      if (p.NETMON_STATUS && p.devices) {
+        currentDevices = p.devices;
+        renderMonitor(currentDevices);
+        if (activeTab==='topology') renderTopology(currentDevices);
       }
     }
-    showErr('⏳ No data yet — make sure monitor_v2.py is running');
-    document.getElementById('main').innerHTML = skeleton();
+
+    // fetch log if we have log message id
+    if (LOG_MID) {
+      const lText = await fetchMessage(LOG_MID);
+      if (lText) {
+        const lp = JSON.parse(lText);
+        if (lp.NETMON_LOG) {
+          currentEvents = lp.events || [];
+        }
+      }
+    } else {
+      // try to get log_mid from getUpdates
+      const res = await fetch(`https://api.telegram.org/bot${TOKEN}/getUpdates?limit=100&offset=-100`);
+      const data = await res.json();
+      if (data.ok) {
+        for (let i=data.result.length-1;i>=0;i--) {
+          const txt = data.result[i].message?.text||'';
+          if (txt.includes('"NETMON_LOG"')) {
+            try {
+              const lp = JSON.parse(txt);
+              if (lp.NETMON_LOG) {
+                currentEvents = lp.events||[];
+                break;
+              }
+            } catch {}
+          }
+        }
+      }
+    }
+
+    startCD();
   } catch(e) {
-    showErr('⚠️ Connection failed: ' + e.message);
+    showErr('⚠️ Connection failed: '+e.message);
   }
 
-  ico.classList.remove('spinning');
-  btn.disabled = false;
+  document.getElementById('ico').classList.remove('spinning');
+  document.getElementById('btnR').disabled = false;
 }
 
-function showErr(msg) {
-  const el = document.getElementById('err');
-  el.textContent = msg;
-  el.style.display = 'block';
+function showErr(msg){
+  const el=document.getElementById('err');
+  el.textContent=msg; el.style.display='block';
+}
+
+function calculateDeviceStats(events){
+  const downs = events.filter(e => e.type === 'DOWN');
+  const ups = events.filter(e => e.type === 'UP');
+  let totalDowntime = 0;
+  
+  // Parse durations
+  downs.forEach(d => {
+    if (d.duration) {
+      const match = d.duration.match(/(\d+)h\s+(\d+)m\s+(\d+)s/) || 
+                    d.duration.match(/(\d+)m\s+(\d+)s/) ||
+                    d.duration.match(/(\d+)s/);
+      if (match) {
+        let secs = 0;
+        if (match[3] !== undefined) {
+          // Format: Xh Ym Zs or Ym Zs
+          if (match[1] && match[2] && match[3]) secs = parseInt(match[1])*3600 + parseInt(match[2])*60 + parseInt(match[3]);
+          else if (match[1] && match[2]) secs = parseInt(match[1])*60 + parseInt(match[2]);
+          else secs = parseInt(match[1]);
+        }
+        totalDowntime += secs;
+      }
+    }
+  });
+  
+  const hours = Math.floor(totalDowntime / 3600);
+  const mins = Math.floor((totalDowntime % 3600) / 60);
+  const secs = totalDowntime % 60;
+  
+  return {
+    downCount: downs.length,
+    upCount: ups.length,
+    totalDowntime: totalDowntime,
+    formattedDowntime: `${hours}h ${mins}m ${secs}s`,
+    lastEvent: events.length > 0 ? events[events.length - 1] : null,
+    firstEvent: events.length > 0 ? events[0] : null
+  };
+}
+
+function openDeviceModal(name, ip){
+  const events = currentEvents.filter(e => e.name===name || e.ip===ip);
+  const types = loadDeviceTypes();
+  const aliases = loadDeviceAliases();
+  const selected = types[name] || inferDeviceType(name);
+  const alias = aliases[ip] || name;
+  const rows = events.length ? events.map(ev => `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)"><div style="font-weight:700">${ev.type} — ${ev.ts}</div><div style="font-size:12px;color:var(--muted)">${ev.ip}</div>${ev.duration?`<div style="font-size:12px;color:var(--up);margin-top:4px">Duration: ${ev.duration}</div>`:''}</div>`).join('') : '<div style="padding:20px;color:var(--muted)">No history available for this device</div>';
+  const h = `<div style="padding:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div><div style="font-size:16px;font-weight:800">${alias}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">${ip}</div></div><div style="font-size:26px">${iconForType(selected)}</div></div><div style="margin-bottom:14px"><label style="display:block;margin-bottom:6px;font-size:12px;color:var(--muted)">Label</label><input id="deviceAliasInput" type="text" value="${alias}" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:var(--surface);color:var(--text);font-family:var(--sans);font-size:14px;margin-bottom:12px" /></div>
+<div style="margin-bottom:14px"><label style="display:block;margin-bottom:6px;font-size:12px;color:var(--muted)">Device type</label>${deviceTypePreview(selected, 'deviceTypeSelect')}</div><div style="font-weight:700;margin-bottom:10px">Down/Up history</div>${rows}<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><button class="btn" onclick="saveDeviceSettings(${JSON.stringify(name)}, ${JSON.stringify(ip)})">Save</button><button class="btn" onclick="closeHistory()">Close</button></div></div>`;
+  document.getElementById('historyModalContent').innerHTML = h;
+  document.getElementById('historyModal').style.display='flex';
+}
+
+function openTopologyIconEditor(){
+  const types = loadDeviceTypes();
+  const aliases = loadDeviceAliases();
+  let rows = '';
+  for (const [zone, list] of Object.entries(ZONES)) {
+    rows += `<div style="margin-top:16px"><div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px">${zone}</div>`;
+    list.forEach(d => {
+      const selected = types[d.name] || inferDeviceType(d.name);
+      const alias = aliases[d.ip] || d.name;
+      const typeOpts = [{id:'computer',label:'💻',icon:'💻'},{id:'printer',label:'🖨️',icon:'🖨️'},{id:'firewall',label:'🔥',icon:'🔥'},{id:'switch',label:'🔀',icon:'🔀'},{id:'tablet',label:'📱',icon:'📱'}];
+      const safeIp = d.ip.replace(/'/g, "\\'");
+      const safeName = d.name.replace(/'/g, "\\'");
+      rows += `<div style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)" data-device-ip="${d.ip}"><div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><div style="min-width:140px"><div style="font-size:13px;font-weight:600">${alias}</div><div style="font-size:11px;color:var(--muted)">${d.ip}</div></div><input id="deviceAliasInput-${d.ip}" type="text" value="${alias}" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:var(--surface);color:var(--text);font-family:var(--sans);font-size:12px" /></div><div style="display:grid;grid-template-columns:repeat(5,40px);gap:6px;margin-bottom:8px">${typeOpts.map(t => `<button type="button" data-device-type-btn="${d.ip}" data-type="${t.id}" onclick="setDeviceTypeInEditor('${safeIp}', '${t.id}')" style="padding:8px;border-radius:8px;border:2px solid ${t.id===selected?'var(--accent)':'rgba(255,255,255,.12)'};background:${t.id===selected?'rgba(77,159,255,.15)':'var(--surface)'};color:var(--text);cursor:pointer;font-size:16px;transition:all .2s" title="${t.label}">${t.icon}</button>`).join('')}</div><input type="hidden" id="deviceTypeSelect-${d.ip}" value="${selected}" /><button class="btn" style="white-space:nowrap;font-size:11px;padding:6px 10px" onclick="saveDeviceSettings('${safeName}', '${safeIp}')">Save</button></div>`;
+    });
+    rows += '</div>';
+  }
+  const h = `<div style="padding:18px;max-height:70vh;overflow:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div><div style="font-size:16px;font-weight:800">Icon Editor</div><div style="font-size:12px;color:var(--muted);margin-top:4px">แก้ไข label และประเภทไอคอนได้ทั้งหน้า Topology</div></div></div>${rows}<div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn" onclick="closeHistory()">Close</button></div></div>`;
+  document.getElementById('historyModalContent').innerHTML = h;
+  document.getElementById('historyModal').style.display='flex';
+}
+
+function closeHistory(){
+  document.getElementById('historyModal').style.display='none';
+}
+
+function deviceTypeOptions(selected){
+  const types = [{id:'computer',label:'Computer'},{id:'printer',label:'Printer'},{id:'firewall',label:'Firewall'},{id:'switch',label:'Switch'},{id:'tablet',label:'Tablet / POS'}];
+  return types.map(t => `<option value="${t.id}"${t.id===selected?' selected':''}>${t.label}</option>`).join('');
+}
+
+function deviceTypePreview(selected, inputId){
+  const types = [{id:'computer',label:'Computer',icon:'💻'},{id:'printer',label:'Printer',icon:'🖨️'},{id:'firewall',label:'Firewall',icon:'🔥'},{id:'switch',label:'Switch',icon:'🔀'},{id:'tablet',label:'Tablet / POS',icon:'📱'}];
+  return `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">${types.map(t => `<button type="button" class="type-btn" data-type="${t.id}" onclick="setDeviceType(${JSON.stringify(inputId)}, ${JSON.stringify(t.id)})" style="padding:12px;border-radius:10px;border:2px solid ${t.id===selected?'var(--accent)':'rgba(255,255,255,.12)'};background:${t.id===selected?'rgba(77,159,255,.15)':'var(--surface)'};color:var(--text);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .2s"><div style="font-size:24px">${t.icon}</div><div style="font-size:11px;font-weight:600;text-align:center">${t.label}</div></button>`).join('')}</div><input type="hidden" id="${inputId}" value="${selected}" />`;
+}
+
+function setDeviceType(inputId, typeId){
+  document.getElementById(inputId).value = typeId;
+  document.querySelectorAll('.type-btn').forEach(btn => {
+    const isSelected = btn.dataset.type === typeId;
+    btn.style.borderColor = isSelected ? 'var(--accent)' : 'rgba(255,255,255,.12)';
+    btn.style.background = isSelected ? 'rgba(77,159,255,.15)' : 'var(--surface)';
+  });
+}
+
+function setDeviceTypeInEditor(ip, typeId){
+  const input = document.getElementById(`deviceTypeSelect-${ip}`);
+  if (!input) {
+    console.error('Type input not found for IP:', ip);
+    return;
+  }
+  input.value = typeId;
+  document.querySelectorAll(`[data-device-type-btn="${ip}"]`).forEach(btn => {
+    const isSelected = btn.dataset.type === typeId;
+    btn.style.borderColor = isSelected ? 'var(--accent)' : 'rgba(255,255,255,.12)';
+    btn.style.background = isSelected ? 'rgba(77,159,255,.15)' : 'var(--surface)';
+  });
+}
+
+function saveDeviceSettings(name, ip){
+  const typeInputId = `deviceTypeSelect-${ip}`;
+  const aliasInputId = `deviceAliasInput-${ip}`;
+  
+  let typeInput = document.getElementById(typeInputId);
+  let aliasInput = document.getElementById(aliasInputId);
+  
+  // Fallback for single device modal
+  if (!typeInput) typeInput = document.getElementById('deviceTypeSelect');
+  if (!aliasInput) aliasInput = document.getElementById('deviceAliasInput');
+  
+  if (!typeInput || !aliasInput) {
+    console.error('Could not find inputs:', typeInputId, aliasInputId);
+    return;
+  }
+  
+  const types = loadDeviceTypes();
+  const aliases = loadDeviceAliases();
+  
+  const newType = typeInput.value;
+  const newAlias = aliasInput.value.trim();
+  
+  // Save device type using device name as key
+  types[name] = newType;
+  
+  // Save device alias using IP as key
+  if (newAlias && newAlias !== name) {
+    aliases[ip] = newAlias;
+  } else {
+    delete aliases[ip];
+  }
+  
+  saveDeviceTypes(types);
+  saveDeviceAliases(aliases);
+  
+  console.log('Saved device:', name, 'Type:', newType, 'Alias:', newAlias);
+  
+  if (currentDevices.length) {
+    renderMonitor(currentDevices);
+    if (activeTab==='topology') renderTopology(currentDevices);
+  }
+  closeHistory();
+}
+
+function loadDeviceTypes(){
+  try { return JSON.parse(localStorage.getItem('netmon_device_types')||'{}'); } catch { return {}; }
+}
+
+function saveDeviceTypes(types){
+  localStorage.setItem('netmon_device_types', JSON.stringify(types));
+}
+
+function loadDeviceAliases(){
+  try { return JSON.parse(localStorage.getItem('netmon_device_aliases')||'{}'); } catch { return {}; }
+}
+
+function saveDeviceAliases(aliases){
+  localStorage.setItem('netmon_device_aliases', JSON.stringify(aliases));
+}
+
+function loadTopologyPositions(){
+  try { return JSON.parse(localStorage.getItem('netmon_topo_positions')||'{}'); } catch { return {}; }
+}
+
+function saveTopologyPositions(positions){
+  localStorage.setItem('netmon_topo_positions', JSON.stringify(positions));
+}
+
+function loadTopologyCanvas(){
+  try { return JSON.parse(localStorage.getItem('netmon_topo_canvas')||'{}'); } catch { return {}; }
+}
+
+function saveTopologyCanvas(canvas){
+  localStorage.setItem('netmon_topo_canvas', JSON.stringify(canvas));
+}
+
+function computeAutoTopologyCanvasSize(flat, positions){
+  const nodeWidth = 84;
+  const nodeHeight = 90;
+  const margin = 24;
+  let maxX = 0, maxY = 0;
+  flat.forEach((d, idx) => {
+    const pos = positions[d.ip] || defaultTopologyPosition(idx);
+    maxX = Math.max(maxX, pos.x + nodeWidth);
+    maxY = Math.max(maxY, pos.y + nodeHeight);
+  });
+  return {
+    w: Math.max(640, Math.min(1600, Math.round(maxX + margin))),
+    h: Math.max(440, Math.min(1200, Math.round(maxY + margin)))
+  };
+}
+
+function autoFitTopologyCanvas(){
+  const positions = loadTopologyPositions();
+  const flat = Object.values(ZONES).flat();
+  const canvas = computeAutoTopologyCanvasSize(flat, positions);
+  saveTopologyCanvas(canvas);
+  const c = document.getElementById('topoCanvas');
+  if (c) { c.style.width = canvas.w + 'px'; c.style.height = canvas.h + 'px'; }
+  updateCanvasLabel();
+}
+
+function setTopologyCanvasSize(w,h){
+  const canvas = { w: Math.max(320, Math.round(w)), h: Math.max(200, Math.round(h)) };
+  saveTopologyCanvas(canvas);
+  const c = document.getElementById('topoCanvas');
+  if (c) { c.style.width = canvas.w + 'px'; c.style.height = canvas.h + 'px'; }
+  updateCanvasLabel();
+}
+
+function updateCanvasLabel(){
+  const lbl = document.getElementById('canvasSizeLabel');
+  if (!lbl) return;
+  const c = loadTopologyCanvas();
+  if (c.w && c.h) lbl.textContent = c.w + '×' + c.h;
+  else lbl.textContent = '';
+}
+
+function loadTopologyLock(){
+  return localStorage.getItem('netmon_topo_locked') === '1';
+}
+
+function saveTopologyLock(locked){
+  localStorage.setItem('netmon_topo_locked', locked ? '1' : '0');
+}
+
+function toggleTopologyLock(){
+  topologyLocked = !topologyLocked;
+  saveTopologyLock(topologyLocked);
+  updateTopologyLockButton();
+}
+
+function updateTopologyLockButton(){
+  const btn = document.getElementById('topoLockBtn');
+  if (!btn) return;
+  btn.textContent = topologyLocked ? 'Unlock positions' : 'Lock positions';
+  document.getElementById('topoGrid').classList.toggle('locked', topologyLocked);
+}
+
+function defaultTopologyPosition(idx){
+  const col = idx % 6;
+  const row = Math.floor(idx / 6);
+  return { x: 12 + col * 104, y: 12 + row * 120 };
+}
+
+function initTopologyDrag(){
+  const nodes = document.querySelectorAll('.topo-node');
+  nodes.forEach(node => {
+    node.addEventListener('mousedown', startTopoDrag);
+    node.addEventListener('touchstart', startTopoDrag, {passive:false});
+  });
+}
+
+function startTopoDrag(event){
+  if (topologyLocked) return;
+  event.preventDefault();
+  const node = event.currentTarget;
+  const ip = node.dataset.ip;
+  const parent = node.parentElement;
+  const startX = event.touches ? event.touches[0].clientX : event.clientX;
+  const startY = event.touches ? event.touches[0].clientY : event.clientY;
+  const rect = node.getBoundingClientRect();
+  const parentRect = parent.getBoundingClientRect();
+  const offsetX = startX - rect.left;
+  const offsetY = startY - rect.top;
+  node.classList.add('dragging');
+
+  function onMove(e){
+    const mx = e.touches ? e.touches[0].clientX : e.clientX;
+    const my = e.touches ? e.touches[0].clientY : e.clientY;
+    let x = mx - parentRect.left - offsetX;
+    let y = my - parentRect.top - offsetY;
+    const maxX = parentRect.width - rect.width - 10;
+    const maxY = parentRect.height - rect.height - 10;
+    x = Math.max(10, Math.min(maxX, x));
+    y = Math.max(10, Math.min(maxY, y));
+    node.style.left = `${x}px`;
+    node.style.top = `${y}px`;
+  }
+
+  function onUp(){
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onUp);
+    node.classList.remove('dragging');
+    const positions = loadTopologyPositions();
+    positions[ip] = { x: parseInt(node.style.left,10), y: parseInt(node.style.top,10) };
+    saveTopologyPositions(positions);
+  }
+
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('touchend', onUp);
+}
+
+function skeleton(){
+  let h='';
+  for(const[z,ns] of Object.entries(ZONES)){
+    h+=`<div class="zone-hdr"><span class="zone-name">${z}</span><span class="zone-line"></span><span class="zone-count">${ns.length}</span></div><div class="grid">`;
+    ns.forEach(()=>h+=`<div class="dcard skel" style="height:72px"><div class="skel-bar" style="width:60%;height:13px;margin-bottom:8px"></div><div class="skel-bar" style="width:45%;height:11px"></div></div>`);
+    h+='</div>';
+  }
+  return h;
+}
+
+function initHistoryTab(){
+  const select = document.getElementById('historyDeviceSelect');
+  select.innerHTML = '<option value="">-- Choose a device --</option>';
+  const allDevices = Object.values(ZONES).flat();
+  const aliases = loadDeviceAliases();
+  allDevices.forEach(d => {
+    const alias = aliases[d.ip] || d.name;
+    select.innerHTML += `<option value='${d.ip}'>${alias}</option>`;
+  });
+  document.getElementById('historyContent').innerHTML = '';
+}
+
+function showDeviceHistoryDetail(){
+  const ip = document.getElementById('historyDeviceSelect').value;
+  if (!ip) {
+    document.getElementById('historyContent').innerHTML = '';
+    return;
+  }
+  
+  const allDevices = Object.values(ZONES).flat();
+  const device = allDevices.find(d => d.ip === ip);
+  if (!device) return;
+  
+  const events = currentEvents.filter(e => e.name===device.name || e.ip===ip).sort((a,b) => new Date(b.ts) - new Date(a.ts));
+  const stats = calculateDeviceStats(events);
+  const types = loadDeviceTypes();
+  const aliases = loadDeviceAliases();
+  const selected = types[device.name] || inferDeviceType(device.name);
+  const alias = aliases[ip] || device.name;
+  
+  let eventRows = '';
+  if (events.length > 0) {
+    events.forEach(ev => {
+      const bgColor = ev.type === 'DOWN' ? 'rgba(255,77,109,.08)' : 'rgba(0,229,160,.08)';
+      const color = ev.type === 'DOWN' ? 'var(--down)' : 'var(--up)';
+      eventRows += `<div style="padding:12px;border-radius:8px;background:${bgColor};border-left:3px solid ${color};margin-bottom:8px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-weight:700;color:${color}">${ev.type}</div>
+          <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${ev.ts}</div>
+        </div>
+        <div style="font-size:12px;color:var(--muted)">${ev.ip}</div>
+        ${ev.duration?`<div style="font-size:12px;color:${color};margin-top:4px;font-weight:600">Duration: ${ev.duration}</div>`:''}</div>`;
+    });
+  } else {
+    eventRows = '<div style="padding:20px;color:var(--muted);text-align:center">No history available for this device</div>';
+  }
+  
+  const statsHtml = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px">
+    <div style="background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.2);border-radius:8px;padding:12px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Times Down</div>
+      <div style="font-size:24px;font-weight:800;color:var(--down)">${stats.downCount}</div>
+    </div>
+    <div style="background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);border-radius:8px;padding:12px">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Times Up</div>
+      <div style="font-size:24px;font-weight:800;color:var(--up)">${stats.upCount}</div>
+    </div>
+    <div style="background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.2);border-radius:8px;padding:12px;grid-column:1/-1">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Total Downtime</div>
+      <div style="font-size:18px;font-weight:800;color:var(--down);font-family:var(--mono)">${stats.formattedDowntime}</div>
+    </div>
+  </div>`;
+  
+  const h = `<div style="max-width:900px">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <div style="font-size:32px">${iconForType(selected)}</div>
+      <div>
+        <div style="font-size:18px;font-weight:800">${alias}</div>
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono)">${ip}</div>
+      </div>
+    </div>
+    ${statsHtml}
+    <div style="font-weight:700;margin-bottom:12px;font-size:14px">Event History</div>
+    <div style="max-height:600px;overflow-y:auto">${eventRows}</div>
+  </div>`;
+  
+  document.getElementById('historyContent').innerHTML = h;
 }
 
 document.getElementById('main').innerHTML = skeleton();
-load();
+doLoad();
 </script>
+
+<!-- history modal -->
+<div id="historyModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:200">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;max-width:720px;width:92%;color:var(--text);box-shadow:0 8px 30px rgba(0,0,0,0.6)">
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.03)">
+      <div style="font-weight:800">Device History</div>
+      <button class="btn" onclick="closeHistory()">Close</button>
+    </div>
+    <div id="historyModalContent" style="max-height:60vh;overflow:auto;padding:10px 14px"></div>
+  </div>
+</div>
 </body>
 </html>
