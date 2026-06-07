@@ -4,205 +4,717 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
 <title>VLAN62 · Network Monitor</title>
-<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#050810;--surface:#0f1629;--card:#141c30;--border:rgba(255,255,255,.07);--border2:rgba(255,255,255,.12);
-  --up:#00e5a0;--up-s:rgba(0,229,160,.08);--down:#ff4d6d;--down-s:rgba(255,77,109,.07);
-  --text:#e8eef8;--muted:#8899b4;--accent:#4d9fff;
-  --mono:'DM Mono',monospace;--sans:'Outfit',sans-serif;
+/* ═══════════════════════════════════════════════════════════════
+   VLAN62 NOC Dashboard — Enterprise Edition
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg:       #020408;
+  --surface:  #080d14;
+  --card:     #0c1420;
+  --card2:    #101820;
+  --border:   rgba(0,200,255,.07);
+  --border2:  rgba(0,200,255,.14);
+  --border3:  rgba(0,200,255,.25);
+  --up:       #00e5a0;
+  --up-s:     rgba(0,229,160,.08);
+  --up-b:     rgba(0,229,160,.15);
+  --down:     #ff4060;
+  --down-s:   rgba(255,64,96,.07);
+  --down-b:   rgba(255,64,96,.15);
+  --warn:     #ffb400;
+  --warn-s:   rgba(255,180,0,.08);
+  --text:     #cddaee;
+  --text2:    #8fa8c8;
+  --muted:    #4a6080;
+  --accent:   #00c8ff;
+  --accent-s: rgba(0,200,255,.08);
+  --accent2:  #0060ff;
+  --purple:   #7b5ea7;
+  --mono: 'JetBrains Mono', monospace;
+  --sans: 'Rajdhani', sans-serif;
+  --r: 12px;
 }
-*{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding-bottom:60px;-webkit-font-smoothing:antialiased}
-body::before{content:'';position:fixed;inset:0;z-index:0;
-  background-image:linear-gradient(rgba(77,159,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(77,159,255,.025) 1px,transparent 1px);
-  background-size:40px 40px;pointer-events:none}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* HEADER */
-.hdr{position:sticky;top:0;z-index:100;background:rgba(5,8,16,.9);backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:14px 18px 12px}
-.hdr-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
-.brand{display:flex;align-items:center;gap:10px}
-.brand-icon{width:32px;height:32px;background:linear-gradient(135deg,#4d9fff22,#7b5ea722);border:1px solid rgba(77,159,255,.25);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px}
-.brand h1{font-size:15px;font-weight:700;letter-spacing:-.01em;line-height:1}
-.brand p{font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:1px}
-.hdr-right{display:flex;gap:8px;align-items:center}
-
-.live{display:flex;align-items:center;gap:5px;background:var(--up-s);border:1px solid rgba(0,229,160,.2);border-radius:20px;padding:4px 10px;font-size:11px;font-weight:600;color:var(--up);font-family:var(--mono);white-space:nowrap;transition:all .4s}
-.live.warn{background:var(--down-s);border-color:rgba(255,77,109,.2);color:var(--down)}
-.live-dot{width:6px;height:6px;border-radius:50%;background:currentColor;animation:lpulse 2s infinite}
-.live.warn .live-dot{animation:wpulse .8s infinite}
-@keyframes lpulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-@keyframes wpulse{0%,100%{opacity:1}50%{opacity:.2}}
-
-.btn{background:var(--surface);border:1px solid var(--border2);color:var(--text);font-family:var(--sans);font-size:12px;font-weight:600;padding:6px 13px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all .2s;white-space:nowrap}
-.btn:hover{background:var(--card);border-color:rgba(255,255,255,.2)}
-.btn:active{transform:scale(.95)}
-.btn.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinning{animation:spin .6s linear infinite}
-
-/* STATS */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
-.stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:10px 12px;position:relative;overflow:hidden}
-.stat::after{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:12px 12px 0 0}
-.stat.u::after{background:linear-gradient(90deg,var(--up),transparent)}
-.stat.d::after{background:linear-gradient(90deg,var(--down),transparent)}
-.stat.t::after{background:linear-gradient(90deg,var(--accent),transparent)}
-.stat-n{font-size:26px;font-weight:800;font-family:var(--mono);line-height:1}
-.stat.u .stat-n{color:var(--up)} .stat.d .stat-n{color:var(--down)} .stat.t .stat-n{color:var(--accent)}
-.stat-l{font-size:11px;color:var(--muted);font-weight:500;margin-top:2px;text-transform:uppercase;letter-spacing:.06em}
-
-/* TABS */
-.tabs{display:flex;gap:6px;margin-bottom:0}
-.tab{background:transparent;border:1px solid var(--border2);color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;padding:6px 13px;border-radius:8px;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.05em}
-.tab:hover{color:var(--text);border-color:rgba(255,255,255,.2)}
-.tab.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
-
-/* FILTER */
-.filter-row{display:flex;gap:6px;padding:10px 18px;border-bottom:1px solid var(--border);position:relative;z-index:1}
-.flt{background:transparent;border:1px solid var(--border2);color:var(--muted);font-family:var(--sans);font-size:12px;font-weight:600;padding:5px 12px;border-radius:7px;cursor:pointer;transition:all .2s;text-transform:uppercase;letter-spacing:.05em}
-.flt:hover{color:var(--text)}
-.flt.active{background:var(--accent);border-color:var(--accent);color:var(--bg)}
-
-/* PROGRESS */
-.prog-track{height:2px;background:var(--surface);position:relative;z-index:1}
-.prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),#7b5ea7);transition:width 1s linear}
-.meta{display:flex;justify-content:space-between;align-items:center;padding:5px 18px;position:relative;z-index:1}
-.meta span{font-size:11px;color:var(--muted)}
-.meta span:last-child{font-family:var(--mono);color:var(--accent)}
-
-/* ALERTS */
-.alert-wrap{padding:0 18px;margin-top:10px;position:relative;z-index:1}
-.alert-box{background:var(--down-s);border:1px solid rgba(255,77,109,.2);border-radius:14px;padding:12px 14px;display:none}
-.alert-hd{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:var(--down);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px}
-.alert-row{display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid rgba(255,77,109,.1);font-size:13px}
-.alert-row:last-child{border:none;padding-bottom:0}
-.alert-dur{font-size:11px;color:var(--down);font-family:var(--mono);background:var(--down-s);padding:2px 7px;border-radius:4px}
-.err-box{background:rgba(251,191,36,.07);border:1px solid rgba(251,191,36,.25);border-radius:12px;padding:11px 14px;font-size:13px;color:#fbbf24;display:none;margin-top:10px}
-
-/* DEVICE VIEW */
-#view-monitor{position:relative;z-index:1}
-.content{padding:14px 18px 0}
-.zone-hdr{display:flex;align-items:center;gap:10px;margin-bottom:9px;margin-top:20px}
-.zone-hdr:first-child{margin-top:0}
-.zone-name{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);white-space:nowrap}
-.zone-line{flex:1;height:1px;background:var(--border)}
-.zone-count{font-size:10px;font-family:var(--mono);color:var(--muted);background:var(--surface);border:1px solid var(--border);padding:1px 7px;border-radius:10px}
-.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
-.dcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px 13px 11px;position:relative;overflow:hidden;transition:border-color .3s,box-shadow .3s;cursor:pointer}
-.dcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:12px 12px 0 0}
-.dcard.up{border-color:rgba(0,229,160,.15)} .dcard.up::before{background:linear-gradient(90deg,var(--up),transparent 70%)}
-.dcard.down{border-color:rgba(255,77,109,.25);background:rgba(255,77,109,.04)} .dcard.down::before{background:linear-gradient(90deg,var(--down),transparent 70%)}
-.dcard-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:6px}
-.dcard-name{font-size:13px;font-weight:600;line-height:1.2;padding-right:4px}
-.badge{font-size:9px;font-weight:700;font-family:var(--mono);padding:3px 7px;border-radius:5px;letter-spacing:.06em;flex-shrink:0}
-.dcard.up .badge{background:var(--up-s);color:var(--up)} .dcard.down .badge{background:var(--down-s);color:var(--down)}
-.dcard-ip{font-size:11px;color:var(--muted);font-family:var(--mono)}
-.dcard-dur{font-size:10px;color:var(--down);font-family:var(--mono);margin-top:4px}
-.dcard-dur::before{content:'↓ '}
-
-/* TOPOLOGY VIEW */
-#view-topology{display:none;position:relative;z-index:1;padding:14px 18px}
-.topo-actions{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
-.topo-grid{position:relative;width:100%;min-width:0;min-height:360px;padding:12px;border:1px solid var(--border);border-radius:16px;background:var(--surface);overflow:auto;resize:both}
-.topo-canvas{position:relative;min-width:100%;min-height:320px;max-width:100%}
-.topo-grid.locked .topo-node{cursor:default}
-  .topo-node{position:absolute;display:inline-flex;flex-direction:column;align-items:center;width:96px;height:100px;background:var(--card);border:2px solid var(--border);border-radius:12px;padding:8px 6px;cursor:grab;transition:all .2s;touch-action:none;box-sizing:border-box}
-  .topo-edit-btn{position:absolute;right:6px;top:6px;background:transparent;border:none;color:var(--muted);font-size:12px;cursor:pointer;padding:4px;border-radius:6px}
-  .topo-edit-btn:hover{background:rgba(255,255,255,0.03);color:var(--text)}
-.topo-node.dragging{cursor:grabbing;opacity:.85;}
-.topo-node.up{border-color:rgba(0,229,160,.4);box-shadow:0 0 12px rgba(0,229,160,.1)}
-.topo-node.down{border-color:rgba(255,77,109,.5);background:rgba(255,77,109,.06);box-shadow:0 0 14px rgba(255,77,109,.12);animation:dnblink 2s infinite}
-@keyframes dnblink{0%,100%{box-shadow:0 0 14px rgba(255,77,109,.12)}50%{box-shadow:0 0 20px rgba(255,77,109,.3)}}
-.topo-icon{font-size:20px;margin-bottom:4px}
-.topo-name{font-size:10px;font-weight:600;text-align:center;line-height:1.2;word-break:break-word;color:var(--text)}
-.topo-ip{font-size:9px;color:var(--muted);font-family:var(--mono);margin-top:2px}
-.topo-status{font-size:9px;font-weight:700;font-family:var(--mono);margin-top:3px;padding:1px 6px;border-radius:3px}
-.topo-node.up .topo-status{background:var(--up-s);color:var(--up)}
-.topo-node.down .topo-status{background:var(--down-s);color:var(--down)}
-
-@media (max-width: 980px) {
-  .hdr-top {flex-wrap:wrap;gap:10px}
-  .hdr-right {width:100%;justify-content:flex-start}
-  .stats {grid-template-columns:repeat(2,minmax(0,1fr))}
-  .tabs {flex-wrap:wrap}
-  .filter-row {padding:10px 12px}
-  .content {padding:14px 12px 0}
-  .zone-hdr {flex-wrap:wrap;gap:8px}
-  .grid {grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
-  .topo-actions {justify-content:flex-start}
+/* ── BODY & GRID BACKGROUND ── */
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  min-height: 100vh;
+  padding-bottom: 80px;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: .01em;
+}
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(0,200,255,.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,200,255,.018) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+body::after {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 60% 50% at 50% -10%, rgba(0,200,255,.06), transparent);
 }
 
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--surface); }
+::-webkit-scrollbar-thumb { background: var(--border3); border-radius: 3px; }
+
+/* ═══════════════ HEADER ═══════════════ */
+.hdr {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(2,4,8,.92);
+  backdrop-filter: blur(24px) saturate(180%);
+  border-bottom: 1px solid var(--border2);
+  padding: 12px 20px 0;
+}
+.hdr-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; gap: 10px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 12px; }
+.brand-icon {
+  width: 36px; height: 36px; flex-shrink: 0;
+  background: linear-gradient(135deg, rgba(0,200,255,.15), rgba(0,96,255,.1));
+  border: 1px solid var(--border3);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 16px;
+  box-shadow: 0 0 20px rgba(0,200,255,.1), inset 0 1px 0 rgba(255,255,255,.05);
+}
+.brand h1 { font-size: 17px; font-weight: 700; letter-spacing: .04em; color: var(--text); line-height: 1; }
+.brand p  { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 2px; letter-spacing: .06em; }
+
+.hdr-right { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+
+/* ── LIVE BADGE ── */
+.live {
+  display: flex; align-items: center; gap: 5px;
+  background: var(--up-s); border: 1px solid rgba(0,229,160,.25);
+  border-radius: 20px; padding: 5px 11px;
+  font-size: 11px; font-weight: 700; color: var(--up);
+  font-family: var(--mono); white-space: nowrap; letter-spacing: .08em;
+  transition: all .5s;
+}
+.live.warn { background: var(--down-s); border-color: rgba(255,64,96,.25); color: var(--down); }
+.live-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: lpulse 2s infinite; }
+.live.warn .live-dot { animation: wpulse .8s infinite; }
+@keyframes lpulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
+@keyframes wpulse { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+/* ── NOTIFICATION BADGE ── */
+.notif-btn {
+  position: relative; background: var(--surface);
+  border: 1px solid var(--border2); color: var(--text2);
+  width: 34px; height: 34px; border-radius: 9px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  font-size: 15px; transition: all .2s; flex-shrink: 0;
+}
+.notif-btn:hover { border-color: var(--border3); color: var(--text); }
+.notif-badge {
+  position: absolute; top: -4px; right: -4px;
+  background: var(--down); color: #fff;
+  font-size: 9px; font-weight: 700; font-family: var(--mono);
+  width: 16px; height: 16px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--bg);
+  display: none;
+}
+
+/* ── BUTTONS ── */
+.btn {
+  background: var(--surface); border: 1px solid var(--border2);
+  color: var(--text); font-family: var(--sans); font-size: 12px; font-weight: 600;
+  padding: 6px 14px; border-radius: 8px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: all .2s; white-space: nowrap; letter-spacing: .04em;
+}
+.btn:hover { background: var(--card2); border-color: var(--border3); color: #fff; }
+.btn:active { transform: scale(.96); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+.btn.primary:hover { background: #30d8ff; border-color: #30d8ff; }
+.btn.danger  { border-color: rgba(255,64,96,.3); color: var(--down); }
+.btn.danger:hover  { background: var(--down-s); }
+.btn.sm { font-size: 11px; padding: 4px 10px; border-radius: 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.spinning { animation: spin .6s linear infinite; }
+
+/* ── STATS SECTION ── */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 8px; margin-bottom: 10px;
+}
+.stat {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r); padding: 10px 12px;
+  position: relative; overflow: hidden;
+  transition: border-color .3s;
+}
+.stat::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 2px; border-radius: var(--r) var(--r) 0 0;
+}
+.stat:hover { border-color: var(--border2); }
+.stat.u::before  { background: linear-gradient(90deg, var(--up), transparent); }
+.stat.d::before  { background: linear-gradient(90deg, var(--down), transparent); }
+.stat.t::before  { background: linear-gradient(90deg, var(--accent), transparent); }
+.stat.w::before  { background: linear-gradient(90deg, var(--warn), transparent); }
+.stat.p::before  { background: linear-gradient(90deg, var(--purple), transparent); }
+.stat-n {
+  font-size: 22px; font-weight: 700; font-family: var(--mono); line-height: 1;
+  transition: all .4s;
+}
+.stat.u .stat-n  { color: var(--up); }
+.stat.d .stat-n  { color: var(--down); }
+.stat.t .stat-n  { color: var(--accent); }
+.stat.w .stat-n  { color: var(--warn); }
+.stat.p .stat-n  { color: var(--purple); }
+.stat-l { font-size: 10px; color: var(--muted); font-weight: 600; margin-top: 3px; text-transform: uppercase; letter-spacing: .07em; }
+/* counter animation */
+@keyframes countUp { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+.stat-n.updated { animation: countUp .3s ease; }
+
+/* ── SEARCH ── */
+.search-row {
+  padding: 8px 0 10px;
+  position: relative;
+}
+.search-wrap {
+  position: relative; display: flex; align-items: center;
+}
+.search-icon {
+  position: absolute; left: 10px; color: var(--muted); font-size: 13px; pointer-events: none;
+}
+.search-input {
+  width: 100%; padding: 8px 10px 8px 32px;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 9px; color: var(--text); font-family: var(--sans); font-size: 13px;
+  outline: none; transition: all .2s; letter-spacing: .03em;
+}
+.search-input::placeholder { color: var(--muted); }
+.search-input:focus { border-color: var(--border3); background: var(--card); box-shadow: 0 0 0 3px rgba(0,200,255,.06); }
+.search-clear {
+  position: absolute; right: 10px; background: none; border: none;
+  color: var(--muted); cursor: pointer; font-size: 14px;
+  display: none; padding: 2px 4px; border-radius: 4px;
+}
+.search-clear:hover { color: var(--text); }
+.search-count {
+  position: absolute; right: 32px; color: var(--muted);
+  font-size: 11px; font-family: var(--mono); pointer-events: none;
+}
+
+/* ── TABS ── */
+.tabs { display: flex; gap: 4px; padding-bottom: 0; }
+.tab {
+  background: transparent; border: none; border-bottom: 2px solid transparent;
+  color: var(--muted); font-family: var(--sans); font-size: 13px; font-weight: 600;
+  padding: 8px 14px 10px; cursor: pointer; transition: all .2s;
+  text-transform: uppercase; letter-spacing: .08em; position: relative;
+}
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── FILTER ROW ── */
+.filter-row {
+  display: flex; gap: 6px; padding: 10px 20px;
+  border-bottom: 1px solid var(--border); position: relative; z-index: 1;
+  flex-wrap: wrap; align-items: center;
+}
+.flt {
+  background: transparent; border: 1px solid var(--border2);
+  color: var(--muted); font-family: var(--sans); font-size: 11px; font-weight: 700;
+  padding: 5px 13px; border-radius: 6px; cursor: pointer;
+  transition: all .2s; text-transform: uppercase; letter-spacing: .07em;
+}
+.flt:hover { color: var(--text); border-color: var(--border3); }
+.flt.active { background: var(--accent); border-color: var(--accent); color: var(--bg); }
+
+/* ── PROGRESS BAR ── */
+.prog-track { height: 2px; background: var(--surface); position: relative; z-index: 1; }
+.prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--purple)); transition: width 1s linear; }
+.meta {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 20px; position: relative; z-index: 1;
+}
+.meta span { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.meta span:last-child { color: var(--accent); }
+
+/* ── ALERTS & ERRORS ── */
+.alert-wrap { padding: 0 20px; margin-top: 8px; position: relative; z-index: 1; }
+.err-box {
+  background: rgba(255,180,0,.06); border: 1px solid rgba(255,180,0,.2);
+  border-radius: var(--r); padding: 10px 14px; font-size: 13px; color: var(--warn);
+  display: none; margin-bottom: 8px;
+}
+.alert-box {
+  background: var(--down-s); border: 1px solid rgba(255,64,96,.18);
+  border-radius: 14px; padding: 12px 14px; display: none; margin-bottom: 8px;
+}
+.alert-hd {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 11px; font-weight: 700; color: var(--down);
+  text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px;
+}
+.alert-row {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 5px 0; border-bottom: 1px solid rgba(255,64,96,.08);
+  font-size: 13px;
+}
+.alert-row:last-child { border: none; padding-bottom: 0; }
+.alert-dur {
+  font-size: 10px; color: var(--down); font-family: var(--mono);
+  background: var(--down-s); padding: 2px 7px; border-radius: 4px;
+}
+
+/* ═══════════════ MONITOR VIEW ═══════════════ */
+#view-monitor { position: relative; z-index: 1; }
+.content { padding: 14px 20px 0; }
+.zone-hdr { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; margin-top: 20px; }
+.zone-hdr:first-child { margin-top: 0; }
+.zone-name { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .14em; color: var(--muted); white-space: nowrap; }
+.zone-line { flex: 1; height: 1px; background: var(--border); }
+.zone-count { font-size: 10px; font-family: var(--mono); color: var(--muted); background: var(--surface); border: 1px solid var(--border); padding: 1px 8px; border-radius: 10px; }
+.grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 8px; }
+
+/* ── DEVICE CARD ── */
+.dcard {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 11px 13px;
+  position: relative; overflow: hidden;
+  transition: border-color .3s, box-shadow .3s, transform .15s;
+  cursor: pointer;
+}
+.dcard::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0;
+  height: 2px; border-radius: var(--r) var(--r) 0 0;
+}
+.dcard.up { border-color: rgba(0,229,160,.12); }
+.dcard.up::before { background: linear-gradient(90deg, var(--up), transparent 60%); }
+.dcard.up:hover { border-color: rgba(0,229,160,.3); box-shadow: 0 4px 20px rgba(0,229,160,.06); transform: translateY(-1px); }
+.dcard.down { border-color: rgba(255,64,96,.25); background: rgba(255,64,96,.03); }
+.dcard.down::before { background: linear-gradient(90deg, var(--down), transparent 60%); }
+.dcard.down:hover { border-color: rgba(255,64,96,.4); box-shadow: 0 4px 20px rgba(255,64,96,.08); transform: translateY(-1px); }
+.dcard-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 5px; gap: 4px; }
+.dcard-icon { font-size: 16px; flex-shrink: 0; margin-right: 2px; }
+.dcard-info { flex: 1; min-width: 0; }
+.dcard-name { font-size: 13px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dcard-ip   { font-size: 10px; color: var(--muted); font-family: var(--mono); margin-top: 1px; }
+.badge {
+  font-size: 9px; font-weight: 700; font-family: var(--mono);
+  padding: 2px 7px; border-radius: 4px; letter-spacing: .07em; flex-shrink: 0;
+}
+.dcard.up .badge   { background: var(--up-s); color: var(--up); border: 1px solid rgba(0,229,160,.2); }
+.dcard.down .badge { background: var(--down-s); color: var(--down); border: 1px solid rgba(255,64,96,.2); }
+.dcard-dur { font-size: 10px; color: var(--down); font-family: var(--mono); margin-top: 5px; opacity: .9; }
+.dcard-dur::before { content: '↓ '; }
+/* pulse anim for down cards */
+@keyframes dpulse { 0%,100%{box-shadow:0 0 0 rgba(255,64,96,0)} 50%{box-shadow:0 0 12px rgba(255,64,96,.12)} }
+.dcard.down { animation: dpulse 3s infinite; }
+
+/* ═══════════════ TOPOLOGY VIEW ═══════════════ */
+#view-topology { display: none; position: relative; z-index: 1; padding: 14px 20px; }
+.topo-actions {
+  display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px;
+  align-items: center;
+}
+.topo-sep { width: 1px; height: 24px; background: var(--border2); margin: 0 2px; }
+
+/* Zoom Controls */
+.zoom-controls {
+  display: flex; gap: 4px; align-items: center;
+  background: var(--surface); border: 1px solid var(--border2);
+  border-radius: 8px; padding: 3px 6px;
+}
+.zoom-btn {
+  background: none; border: none; color: var(--text2); cursor: pointer;
+  font-size: 14px; width: 22px; height: 22px; border-radius: 4px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; transition: all .15s;
+}
+.zoom-btn:hover { background: var(--border); color: var(--text); }
+.zoom-level { font-size: 10px; font-family: var(--mono); color: var(--muted); min-width: 36px; text-align: center; }
+
+.topo-wrap {
+  position: relative; overflow: hidden;
+  border: 1px solid var(--border2); border-radius: 16px;
+  background: var(--surface);
+}
+.topo-viewport {
+  overflow: auto; min-height: 380px; position: relative;
+  cursor: default;
+}
+.topo-canvas-outer {
+  transform-origin: 0 0;
+  transition: transform .2s ease;
+  position: relative;
+}
+.topo-canvas {
+  position: relative; min-width: 720px; min-height: 420px;
+}
+.topo-grid { position: relative; width: 100%; }
+.topo-grid.locked .topo-node { cursor: default; }
+
+/* SVG connections */
+.topo-svg {
+  position: absolute; top: 0; left: 0;
+  pointer-events: none; z-index: 0;
+  overflow: visible;
+}
+
+.topo-node {
+  position: absolute; display: flex; flex-direction: column; align-items: center;
+  width: 96px; min-height: 94px;
+  background: var(--card); border: 1.5px solid var(--border2);
+  border-radius: var(--r); padding: 8px 6px 7px;
+  cursor: grab; transition: border-color .3s, box-shadow .3s;
+  touch-action: none; z-index: 1;
+}
+.topo-node:hover { z-index: 5; }
+.topo-node.dragging { cursor: grabbing; opacity: .9; z-index: 10; }
+.topo-node.up { border-color: rgba(0,229,160,.3); box-shadow: 0 0 16px rgba(0,229,160,.08); }
+.topo-node.down {
+  border-color: rgba(255,64,96,.4);
+  background: rgba(255,64,96,.04);
+  box-shadow: 0 0 18px rgba(255,64,96,.15);
+  animation: dnblink 2.5s infinite;
+}
+@keyframes dnblink { 0%,100%{box-shadow:0 0 18px rgba(255,64,96,.12)} 50%{box-shadow:0 0 26px rgba(255,64,96,.28)} }
+
+/* ── MINI MAP ── */
+.minimap {
+  position: absolute; bottom: 14px; right: 14px;
+  width: 140px; height: 90px;
+  background: rgba(2,4,8,.85); border: 1px solid var(--border2);
+  border-radius: 8px; overflow: hidden; z-index: 20;
+  pointer-events: none;
+}
+.minimap-canvas { position: relative; width: 100%; height: 100%; }
+.minimap-node {
+  position: absolute; border-radius: 1.5px;
+  transition: all .3s;
+}
+
+.topo-icon   { font-size: 20px; margin-bottom: 3px; }
+.topo-name   { font-size: 10px; font-weight: 600; text-align: center; line-height: 1.2; word-break: break-word; color: var(--text); }
+.topo-ip     { font-size: 9px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+.topo-status { font-size: 9px; font-weight: 700; font-family: var(--mono); margin-top: 3px; padding: 1px 6px; border-radius: 3px; letter-spacing: .05em; }
+.topo-node.up .topo-status   { background: var(--up-s); color: var(--up); }
+.topo-node.down .topo-status { background: var(--down-s); color: var(--down); }
+
+/* ═══════════════ HISTORY VIEW ═══════════════ */
+#view-history { display: none; position: relative; z-index: 1; padding: 14px 20px; }
+.history-tabs {
+  display: flex; gap: 4px; margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.htab {
+  background: none; border: none; border-bottom: 2px solid transparent;
+  color: var(--muted); font-family: var(--sans); font-size: 12px; font-weight: 700;
+  padding: 6px 14px 8px; cursor: pointer; transition: all .2s;
+  text-transform: uppercase; letter-spacing: .07em;
+}
+.htab:hover { color: var(--text); }
+.htab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* Event Log Timeline */
+.ev-timeline { position: relative; padding-left: 22px; }
+.ev-timeline::before {
+  content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px;
+  width: 1.5px; background: var(--border2);
+}
+.ev-item {
+  position: relative; margin-bottom: 10px;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 10px 13px;
+  transition: border-color .2s;
+}
+.ev-item:hover { border-color: var(--border2); }
+.ev-item::before {
+  content: ''; position: absolute; left: -18px; top: 50%; transform: translateY(-50%);
+  width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid;
+  background: var(--bg);
+}
+.ev-item.down-ev  { border-color: rgba(255,64,96,.2); }
+.ev-item.down-ev::before  { border-color: var(--down); background: rgba(255,64,96,.3); }
+.ev-item.up-ev    { border-color: rgba(0,229,160,.15); }
+.ev-item.up-ev::before    { border-color: var(--up); background: rgba(0,229,160,.2); }
+.ev-type   { font-size: 11px; font-weight: 700; font-family: var(--mono); letter-spacing: .08em; }
+.ev-ts     { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.ev-name   { font-size: 13px; font-weight: 600; margin-top: 2px; }
+.ev-ip     { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+.ev-dur    { font-size: 11px; font-family: var(--mono); margin-top: 3px; }
+
+/* Chart Canvas */
+.chart-wrap {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r); padding: 16px; margin-bottom: 14px; overflow: hidden;
+}
+
+/* ═══════════════ DASHBOARD VIEW ═══════════════ */
+#view-dashboard { position: relative; z-index: 1; padding: 14px 20px; }
+.dash-cards {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 12px; margin-bottom: 16px;
+}
+.dash-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 14px; padding: 16px 18px;
+  position: relative; overflow: hidden;
+  transition: border-color .3s, transform .15s;
+}
+.dash-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+.dash-card::before {
+  content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; border-radius: 14px 14px 0 0;
+}
+.dash-card.c-up::before    { background: linear-gradient(90deg, var(--up), transparent); }
+.dash-card.c-down::before  { background: linear-gradient(90deg, var(--down), transparent); }
+.dash-card.c-blue::before  { background: linear-gradient(90deg, var(--accent), transparent); }
+.dash-card.c-warn::before  { background: linear-gradient(90deg, var(--warn), transparent); }
+.dash-card.c-purple::before{ background: linear-gradient(90deg, var(--purple), transparent); }
+.dash-card.c-teal::before  { background: linear-gradient(90deg, #00e0c8, transparent); }
+.dash-value {
+  font-size: 36px; font-weight: 700; font-family: var(--mono); line-height: 1;
+  margin-bottom: 6px;
+}
+.c-up .dash-value    { color: var(--up); }
+.c-down .dash-value  { color: var(--down); }
+.c-blue .dash-value  { color: var(--accent); }
+.c-warn .dash-value  { color: var(--warn); }
+.c-purple .dash-value{ color: var(--purple); }
+.c-teal .dash-value  { color: #00e0c8; }
+.dash-label { font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+.dash-sub   { font-size: 12px; color: var(--text2); margin-top: 6px; }
+.dash-icon  { position: absolute; right: 14px; top: 14px; font-size: 28px; opacity: .15; }
+/* Animated bar */
+.dash-bar   { margin-top: 10px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.dash-bar-fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+.c-up .dash-bar-fill    { background: var(--up); }
+.c-down .dash-bar-fill  { background: var(--down); }
+
+/* ═══════════════ NOTIFICATION PANEL ═══════════════ */
+.notif-panel {
+  position: fixed; top: 0; right: -340px; bottom: 0; width: 320px;
+  background: rgba(8,13,20,.97); border-left: 1px solid var(--border2);
+  backdrop-filter: blur(24px); z-index: 300; padding: 20px;
+  transition: right .3s cubic-bezier(.4,0,.2,1);
+  display: flex; flex-direction: column;
+}
+.notif-panel.open { right: 0; }
+.notif-hdr {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border);
+}
+.notif-title { font-size: 14px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.notif-list { flex: 1; overflow-y: auto; }
+.notif-item {
+  padding: 12px 0; border-bottom: 1px solid var(--border);
+  display: flex; gap: 12px; align-items: flex-start;
+  animation: notifIn .3s ease;
+}
+@keyframes notifIn { from{opacity:0;transform:translateX(12px)} to{opacity:1;transform:none} }
+.notif-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+.notif-dot.down { background: var(--down); box-shadow: 0 0 8px var(--down); }
+.notif-dot.up   { background: var(--up); box-shadow: 0 0 8px var(--up); }
+.notif-dot.warn { background: var(--warn); box-shadow: 0 0 8px var(--warn); }
+.notif-msg   { font-size: 13px; font-weight: 600; line-height: 1.3; }
+.notif-time  { font-size: 11px; color: var(--muted); font-family: var(--mono); margin-top: 3px; }
+.notif-empty { color: var(--muted); font-size: 13px; text-align: center; margin-top: 40px; }
+
+/* ── EXPORT ROW ── */
+.export-row {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px;
+}
+
+/* ═══════════════ DEVICE MODAL ═══════════════ */
+.modal-overlay {
+  position: fixed; inset: 0; display: none;
+  align-items: center; justify-content: center;
+  background: rgba(0,0,0,.7); z-index: 200;
+  backdrop-filter: blur(4px);
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: 16px; max-width: 680px; width: 92%;
+  color: var(--text); box-shadow: 0 20px 60px rgba(0,0,0,.7);
+  max-height: 90vh; display: flex; flex-direction: column;
+  animation: modalIn .25s cubic-bezier(.4,0,.2,1);
+}
+@keyframes modalIn { from{opacity:0;transform:translateY(12px) scale(.98)} to{opacity:1;transform:none} }
+.modal-hdr {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 18px; border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.modal-body { overflow-y: auto; padding: 16px 18px; flex: 1; }
+.modal-foot { padding: 12px 18px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; flex-shrink: 0; }
+
+/* Device detail fields */
+.field-group { margin-bottom: 14px; }
+.field-label { display: block; font-size: 11px; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 6px; }
+.field-input {
+  width: 100%; padding: 9px 12px; border-radius: 8px;
+  border: 1px solid var(--border2); background: var(--surface);
+  color: var(--text); font-family: var(--sans); font-size: 14px;
+  outline: none; transition: border-color .2s;
+}
+.field-input:focus { border-color: var(--border3); box-shadow: 0 0 0 3px rgba(0,200,255,.06); }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Device stat mini-cards */
+.dstat-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 8px; margin-bottom: 14px; }
+.dstat { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+.dstat-n { font-size: 20px; font-weight: 700; font-family: var(--mono); }
+.dstat-l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin-top: 2px; }
+
+/* Device type selector */
+.type-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 8px; }
+.type-btn-card {
+  padding: 10px 6px; border-radius: 10px;
+  border: 2px solid var(--border2); background: var(--surface);
+  color: var(--text); cursor: pointer; text-align: center;
+  transition: all .2s; font-family: var(--sans);
+}
+.type-btn-card:hover { border-color: var(--border3); }
+.type-btn-card.sel { border-color: var(--accent); background: rgba(0,200,255,.08); }
+.type-btn-card .ti { font-size: 22px; display: block; margin-bottom: 4px; }
+.type-btn-card .tl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+
+/* ═══════════════ SKELETON ═══════════════ */
+.skel { animation: sk 1.5s ease-in-out infinite; }
+@keyframes sk { 0%,100%{opacity:.2} 50%{opacity:.45} }
+.skel-bar { background: var(--border2); border-radius: 4px; }
+
+/* ═══════════════ RESPONSIVE ═══════════════ */
+@media (max-width: 1200px) {
+  .stats-row { grid-template-columns: repeat(3,1fr); }
+  .dash-cards { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 900px) {
+  .hdr { padding: 12px 14px 0; }
+  .stats-row { grid-template-columns: repeat(3,1fr); gap: 6px; }
+  .filter-row { padding: 10px 14px; }
+  .content { padding: 12px 14px 0; }
+  .grid { grid-template-columns: repeat(auto-fit, minmax(200px,1fr)); }
+  .topo-actions { justify-content: flex-start; }
+  .dash-cards { grid-template-columns: repeat(2,1fr); }
+}
 @media (max-width: 640px) {
-  body {padding-bottom:80px}
-  .hdr{padding:12px 12px 10px}
-  .brand p {display:none}
-  .stats {grid-template-columns:1fr;gap:8px}
-  .alert-wrap{padding:0 12px}
-  .tabs, .filter-row {padding:0 12px;gap:6px}
-  .tab, .flt, .btn {font-size:11px;padding:8px 10px}
-  .meta{padding:5px 12px;flex-direction:column;align-items:flex-start;gap:4px}
-  .zone-hdr{align-items:flex-start}
-  .grid {grid-template-columns:1fr}
-  .topo-grid{padding:10px;min-height:260px;resize:none}
-  .topo-canvas{min-height:280px}
-  .topo-node{width:84px;height:90px;padding:6px 5px}
-  .topo-icon{font-size:18px}
-  .topo-name{font-size:9px}
-  .topo-ip{font-size:8px}
-  .topo-status{font-size:8px;padding:1px 5px}
+  body { padding-bottom: 100px; }
+  .hdr { padding: 10px 12px 0; }
+  .brand p { display: none; }
+  .stats-row { grid-template-columns: repeat(2,1fr); gap: 6px; }
+  .stat-n { font-size: 18px; }
+  .alert-wrap { padding: 0 12px; }
+  .filter-row { padding: 8px 12px; }
+  .meta { padding: 4px 12px; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .grid { grid-template-columns: 1fr; }
+  .topo-node { width: 82px; min-height: 86px; }
+  .topo-icon { font-size: 18px; }
+  .topo-name { font-size: 9px; }
+  .dash-cards { grid-template-columns: 1fr; }
+  .dash-value { font-size: 28px; }
+  .field-row { grid-template-columns: 1fr; }
+  .dstat-grid { grid-template-columns: repeat(2,1fr); }
+  .type-grid { grid-template-columns: repeat(3,1fr); }
+  .tabs { gap: 0; }
+  .tab { padding: 8px 10px 10px; font-size: 11px; }
 }
-
-/* SKELETON */
-.skel{animation:sk 1.6s ease-in-out infinite}
-@keyframes sk{0%,100%{opacity:.25}50%{opacity:.55}}
-.skel-bar{background:var(--border2);border-radius:4px}
+@media (min-width: 1800px) {
+  .grid { grid-template-columns: repeat(4,1fr); }
+  .stats-row { grid-template-columns: repeat(6,1fr); }
+  .dash-cards { grid-template-columns: repeat(3,1fr); }
+}
 </style>
 </head>
 <body>
 
+<!-- ══ NOTIFICATION PANEL ══ -->
+<div class="notif-panel" id="notifPanel">
+  <div class="notif-hdr">
+    <div class="notif-title">🔔 Notifications</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn sm" onclick="clearNotifications()">Clear all</button>
+      <button class="btn sm" onclick="closeNotifPanel()">✕</button>
+    </div>
+  </div>
+  <div class="notif-list" id="notifList">
+    <div class="notif-empty">No notifications yet</div>
+  </div>
+</div>
+
+<!-- ══ HEADER ══ -->
 <div class="hdr">
   <div class="hdr-top">
     <div class="brand">
       <div class="brand-icon">📡</div>
       <div>
-        <h1>Network Monitor</h1>
-        <p>VLAN 62 · 40 devices</p>
+        <h1>NOC Dashboard</h1>
+        <p>VLAN 62 · 40 Devices</p>
       </div>
     </div>
     <div class="hdr-right">
       <div class="live" id="liveBadge"><span class="live-dot"></span><span id="liveText">LIVE</span></div>
-      <button class="btn" id="btnR" onclick="doLoad()">
+      <div style="position:relative">
+        <button class="notif-btn" onclick="toggleNotifPanel()" title="Notifications">🔔
+          <span class="notif-badge" id="notifBadge">0</span>
+        </button>
+      </div>
+      <button class="btn" id="btnR" onclick="doLoad()" title="Refresh">
         <svg id="ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/>
           <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/>
         </svg>
+        Refresh
       </button>
     </div>
   </div>
 
-  <div class="stats">
+  <!-- Stats Bar -->
+  <div class="stats-row">
     <div class="stat u"><div class="stat-n" id="nUp">—</div><div class="stat-l">Online</div></div>
     <div class="stat d"><div class="stat-n" id="nDn">—</div><div class="stat-l">Offline</div></div>
     <div class="stat t"><div class="stat-n" id="nTt">—</div><div class="stat-l">Total</div></div>
+    <div class="stat u"><div class="stat-n" id="nUpt">—</div><div class="stat-l">Uptime %</div></div>
+    <div class="stat w"><div class="stat-n" id="nEvt">—</div><div class="stat-l">Events</div></div>
+    <div class="stat p"><div class="stat-n" id="nAlt">—</div><div class="stat-l">Active Alerts</div></div>
   </div>
 
+  <!-- Tabs -->
   <div class="tabs">
-    <button class="tab active" onclick="switchTab('monitor')">Monitor</button>
-    <button class="tab" onclick="switchTab('topology')">Topology</button>
-    <button class="tab" onclick="switchTab('history')">History</button>
+    <button class="tab active" onclick="switchTab('monitor',this)">⬡ Monitor</button>
+    <button class="tab" onclick="switchTab('dashboard',this)">◈ Dashboard</button>
+    <button class="tab" onclick="switchTab('topology',this)">◉ Topology</button>
+    <button class="tab" onclick="switchTab('history',this)">◷ History</button>
   </div>
 </div>
 
+<!-- ══ FILTER ROW ══ -->
 <div id="filter-row" class="filter-row">
-  <button class="flt active" onclick="setFilter('all')">All</button>
-  <button class="flt" onclick="setFilter('online')">Online</button>
-  <button class="flt" onclick="setFilter('offline')">Offline</button>
+  <button class="flt active" onclick="setFilter('all',this)">All</button>
+  <button class="flt" onclick="setFilter('online',this)">Online</button>
+  <button class="flt" onclick="setFilter('offline',this)">Offline</button>
+  <div style="flex:1"></div>
+  <!-- Search -->
+  <div class="search-wrap" style="max-width:260px;width:100%">
+    <span class="search-icon">🔍</span>
+    <input class="search-input" id="searchInput" type="text" placeholder="Search name, IP, alias…" oninput="onSearch(this.value)">
+    <span class="search-count" id="searchCount"></span>
+    <button class="search-clear" id="searchClear" onclick="clearSearch()">✕</button>
+  </div>
 </div>
 
 <div class="prog-track"><div class="prog-fill" id="prog" style="width:100%"></div></div>
-<div class="meta"><span id="lastUpd">Loading...</span><span id="cdTxt">—</span></div>
+<div class="meta"><span id="lastUpd">Loading…</span><span id="cdTxt">—</span></div>
 
+<!-- Alerts -->
 <div class="alert-wrap">
   <div class="err-box" id="err"></div>
   <div class="alert-box" id="alertBox">
@@ -210,207 +722,1070 @@ body::before{content:'';position:fixed;inset:0;z-index:0;
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
         <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
         <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
-      </svg>Offline Devices
+      </svg> Offline Devices
     </div>
     <div id="alertBody"></div>
   </div>
 </div>
 
+<!-- ══ VIEWS ══ -->
 <div id="view-monitor">
   <div class="content" id="main"></div>
 </div>
 
-<div id="view-topology">
-  <div class="topo-actions" style="display:flex;justify-content:flex-end;padding:0 18px 10px;gap:8px">
-    <button class="btn" onclick="openTopologyIconEditor()">Edit</button>
-    <button class="btn" id="topoLockBtn" onclick="toggleTopologyLock()">Lock positions</button>
-    <button class="btn" onclick="autoFitTopologyCanvas()">Auto fit</button>
-  <div class="topo-grid" id="topoGrid"></div>
+<div id="view-dashboard" style="display:none">
+  <div class="dash-cards" id="dashCards"></div>
+  <div class="chart-wrap">
+    <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:14px">Event Activity (Last 200 Events)</div>
+    <canvas id="eventChart" height="120" style="width:100%"></canvas>
+  </div>
+  <div class="export-row">
+    <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);display:flex;align-items:center;margin-right:4px">Export:</div>
+    <button class="btn sm" onclick="exportCSV()">📄 CSV</button>
+    <button class="btn sm" onclick="exportJSON()">{ } JSON</button>
+    <button class="btn sm" onclick="exportPDF()">🖨️ Print/PDF</button>
+  </div>
 </div>
 
-<div id="view-history" style="display:none;position:relative;z-index:1;padding:14px 18px">
-  <div style="margin-bottom:16px">
-    <label style="display:block;margin-bottom:8px;font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase">Select Device</label>
-    <select id="historyDeviceSelect" onchange="showDeviceHistoryDetail()" style="width:100%;max-width:300px;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:var(--surface);color:var(--text);font-family:var(--sans);font-size:14px;cursor:pointer">
-      <option value="">-- Choose a device --</option>
-    </select>
+<div id="view-topology" style="display:none;position:relative;z-index:1;padding:14px 20px">
+  <div class="topo-actions">
+    <button class="btn sm" onclick="openTopologyIconEditor()">✏️ Edit</button>
+    <button class="btn sm" id="topoLockBtn" onclick="toggleTopologyLock()">🔓 Lock</button>
+    <button class="btn sm" onclick="autoFitTopologyCanvas()">⊞ Auto Fit</button>
+    <button class="btn sm" onclick="autoArrangeTopology()">⊛ Auto Arrange</button>
+    <button class="btn sm" onclick="groupByZone()">⊙ Group by Zone</button>
+    <div class="topo-sep"></div>
+    <div class="zoom-controls">
+      <button class="zoom-btn" onclick="zoomTopo(-0.1)">−</button>
+      <span class="zoom-level" id="zoomLevel">100%</span>
+      <button class="zoom-btn" onclick="zoomTopo(0.1)">+</button>
+      <button class="zoom-btn" onclick="zoomReset()" title="Reset zoom" style="font-size:10px;width:28px">⊡</button>
+    </div>
   </div>
-  <div id="historyContent"></div>
+  <div class="topo-wrap">
+    <div class="topo-viewport" id="topoViewport">
+      <div class="topo-canvas-outer" id="topoOuter">
+        <div class="topo-grid" id="topoGrid">
+          <div class="topo-canvas" id="topoCanvas"></div>
+        </div>
+      </div>
+    </div>
+    <div class="minimap" id="minimap"><div class="minimap-canvas" id="minimapCanvas"></div></div>
+  </div>
+</div>
+
+<div id="view-history" style="display:none;position:relative;z-index:1;padding:14px 20px">
+  <div class="history-tabs">
+    <button class="htab active" onclick="switchHistoryTab('log',this)">Event Log</button>
+    <button class="htab" onclick="switchHistoryTab('device',this)">By Device</button>
+    <button class="htab" onclick="switchHistoryTab('daily',this)">Daily Report</button>
+  </div>
+  <!-- Log tab -->
+  <div id="htab-log">
+    <div style="display:flex;gap:6px;margin-bottom:12px;flex-wrap:wrap">
+      <button class="flt active" onclick="setLogFilter('all',this)">All</button>
+      <button class="flt" onclick="setLogFilter('down',this)">DOWN</button>
+      <button class="flt" onclick="setLogFilter('up',this)">UP</button>
+    </div>
+    <div class="ev-timeline" id="evLog"></div>
+  </div>
+  <!-- By Device tab -->
+  <div id="htab-device" style="display:none">
+    <div style="margin-bottom:14px">
+      <label class="field-label">Select Device</label>
+      <select id="historyDeviceSelect" onchange="showDeviceHistoryDetail()" style="width:100%;max-width:320px;padding:9px 12px;border-radius:8px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-family:var(--sans);font-size:14px;cursor:pointer;outline:none">
+        <option value="">— Choose a device —</option>
+      </select>
+    </div>
+    <div id="historyContent"></div>
+  </div>
+  <!-- Daily Report tab -->
+  <div id="htab-daily" style="display:none">
+    <div id="dailyReport"></div>
+  </div>
+</div>
+
+<!-- ══ DEVICE MODAL ══ -->
+<div class="modal-overlay" id="historyModal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box">
+    <div class="modal-hdr">
+      <div style="font-weight:800;font-size:15px;letter-spacing:.03em" id="modalTitle">Device Detail</div>
+      <button class="btn sm" onclick="closeModal()">✕ Close</button>
+    </div>
+    <div class="modal-body" id="historyModalContent"></div>
+    <div class="modal-foot" id="modalFoot"></div>
+  </div>
 </div>
 
 <script>
-const TOKEN   = "8830819103:AAHrzzpGlJR2GY0yK2k-pw8SIENeBiBteI4";
-const CHAT_ID = "8741011248";
+/* ══════════════════════════════════════════════════════════════
+   VLAN62 NOC Dashboard — Main Script
+   ══════════════════════════════════════════════════════════════ */
+
+// ── CONSTANTS ────────────────────────────────────────────────
+const TOKEN      = "8830819103:AAHrzzpGlJR2GY0yK2k-pw8SIENeBiBteI4";
+const CHAT_ID    = "8741011248";
 const STATUS_MID = 33;
-// ← เปลี่ยนตรงนี้หลังจากรัน monitor_v3.py แล้วได้ log message_id ใหม่
-let LOG_MID = 221;
+let   LOG_MID    = 221;
+const REFRESH    = 60;
 
-const REFRESH = 60;
-let filterMode = 'all', logFilterMode = 'all', activeTab = 'monitor';
-let currentDevices = [], currentEvents = [];
-let topologyLocked = false;
-let cdN = REFRESH, cdT = null;
+// ── STATE ────────────────────────────────────────────────────
+let filterMode    = 'all';
+let logFilterMode = 'all';
+let activeTab     = 'monitor';
+let activeHTab    = 'log';
+let currentDevices= [];
+let currentEvents = [];
+let notifications = [];
+let topoLocked    = false;
+let topoZoom      = 1;
+let cdN           = REFRESH;
+let cdTimer       = null;
+let searchQuery   = '';
 
+// ── ZONES ────────────────────────────────────────────────────
 const ZONES = {
-  "Kitchen":    [{ name:"Main Kitchen",ip:"10.0.62.221"},{name:"Cold Kitchen",ip:"10.0.62.222"},{name:"Thai Kitchen",ip:"10.0.62.223"},{name:"Bakery",ip:"10.0.62.224"},{name:"Bar Cafe",ip:"10.0.62.225"},{name:"LC Pos01",ip:"10.0.62.201"},{name:"LC Pos09",ip:"10.0.62.209"},{name:"iPad01 LC",ip:"10.0.62.241"}],
-  "LT":         [{name:"Main LT",ip:"10.0.62.226"},{name:"Cold LT",ip:"10.0.62.227"},{name:"Bar LT",ip:"10.0.62.228"},{name:"LT POS02",ip:"10.0.62.202"},{name:"LT POS12",ip:"10.0.62.212"},{name:"iPad02 LT",ip:"10.0.62.242"}],
-  "RS":         [{name:"RSPOS03",ip:"10.0.62.203"},{name:"iPad03 RS",ip:"10.0.62.243"}],
-  "CB":         [{name:"Main CB",ip:"10.0.62.229"},{name:"Cold CB",ip:"10.0.62.230"},{name:"Bar CB",ip:"10.0.62.231"},{name:"CB Pos04",ip:"10.0.62.204"},{name:"CB Pos11",ip:"10.0.62.211"},{name:"iPad04 CB",ip:"10.0.62.244"},{name:"iPad09 CB",ip:"10.0.62.249"},{name:"iPad10 CB",ip:"10.0.62.250"}],
-  "HL":         [{name:"Bar HL",ip:"10.0.62.232"},{name:"HL Pos05",ip:"10.0.62.205"},{name:"iPad07 HL",ip:"10.0.62.247"}],
-  "PB":         [{name:"Bar Pool",ip:"10.0.62.233"},{name:"PB POS06",ip:"10.0.62.206"},{name:"PB Pos10",ip:"10.0.62.210"},{name:"iPad08 PB",ip:"10.0.62.248"},{name:"iPad05 PB",ip:"10.0.62.245"}],
-  "BJ":         [{name:"Main BJ",ip:"10.0.62.234"},{name:"Bar BJ",ip:"10.0.62.235"},{name:"BJ Pos07",ip:"10.0.62.207"},{name:"BJ Pos13",ip:"10.0.62.213"},{name:"iPad06 BJ",ip:"10.0.62.246"}],
-  "Other":      [{name:"Firewall",ip:"10.0.62.254"},{name:"Core Switch",ip:"10.0.62.253"},{name:"BQ Pos08",ip:"10.0.62.208"}]
+  "Kitchen": [{name:"Main Kitchen",ip:"10.0.62.221"},{name:"Cold Kitchen",ip:"10.0.62.222"},{name:"Thai Kitchen",ip:"10.0.62.223"},{name:"Bakery",ip:"10.0.62.224"},{name:"Bar Cafe",ip:"10.0.62.225"},{name:"LC Pos01",ip:"10.0.62.201"},{name:"LC Pos09",ip:"10.0.62.209"},{name:"iPad01 LC",ip:"10.0.62.241"}],
+  "LT":      [{name:"Main LT",ip:"10.0.62.226"},{name:"Cold LT",ip:"10.0.62.227"},{name:"Bar LT",ip:"10.0.62.228"},{name:"LT POS02",ip:"10.0.62.202"},{name:"LT POS12",ip:"10.0.62.212"},{name:"iPad02 LT",ip:"10.0.62.242"}],
+  "RS":      [{name:"RSPOS03",ip:"10.0.62.203"},{name:"iPad03 RS",ip:"10.0.62.243"}],
+  "CB":      [{name:"Main CB",ip:"10.0.62.229"},{name:"Cold CB",ip:"10.0.62.230"},{name:"Bar CB",ip:"10.0.62.231"},{name:"CB Pos04",ip:"10.0.62.204"},{name:"CB Pos11",ip:"10.0.62.211"},{name:"iPad04 CB",ip:"10.0.62.244"},{name:"iPad09 CB",ip:"10.0.62.249"},{name:"iPad10 CB",ip:"10.0.62.250"}],
+  "HL":      [{name:"Bar HL",ip:"10.0.62.232"},{name:"HL Pos05",ip:"10.0.62.205"},{name:"iPad07 HL",ip:"10.0.62.247"}],
+  "PB":      [{name:"Bar Pool",ip:"10.0.62.233"},{name:"PB POS06",ip:"10.0.62.206"},{name:"PB Pos10",ip:"10.0.62.210"},{name:"iPad08 PB",ip:"10.0.62.248"},{name:"iPad05 PB",ip:"10.0.62.245"}],
+  "BJ":      [{name:"Main BJ",ip:"10.0.62.234"},{name:"Bar BJ",ip:"10.0.62.235"},{name:"BJ Pos07",ip:"10.0.62.207"},{name:"BJ Pos13",ip:"10.0.62.213"},{name:"iPad06 BJ",ip:"10.0.62.246"}],
+  "Core":    [{name:"Firewall",ip:"10.0.62.254"},{name:"Core Switch",ip:"10.0.62.253"},{name:"BQ Pos08",ip:"10.0.62.208"}]
 };
 
-const ICONS = {
-  Firewall:'🔥', 'Core Switch':'🔀',
-  default:'💻'
-};
-function inferDeviceType(name){
-  if (name.includes('Firewall')) return 'firewall';
-  if (name.includes('Core Switch') || name.includes('Switch')) return 'switch';
-  if (name.includes('iPad') || name.includes('POS') || name.includes('Pos')) return 'tablet';
-  if (name.includes('Printer') || name.includes('Print') || name.includes('PRT')) return 'printer';
-  return 'computer';
+// ── DEVICE TYPES & ICONS ─────────────────────────────────────
+const DEVICE_TYPES = [
+  {id:'firewall', label:'Firewall',   icon:'🛡️'},
+  {id:'switch',   label:'Switch',     icon:'🔀'},
+  {id:'ipad',     label:'iPad',       icon:'📱'},
+  {id:'pos',      label:'POS',        icon:'💻'},
+  {id:'pc',       label:'PC',         icon:'💻'},
+  {id:'printer',  label:'Printer',    icon:'🖨️'}
+];
+
+function inferDeviceType(name) {
+  if (/Firewall/i.test(name))              return 'firewall';
+  if (/Switch/i.test(name))               return 'switch';
+  if (/iPad/i.test(name))                 return 'ipad';
+  if (/POS|Pos/i.test(name))              return 'pos';
+  if (/Print|PRT/i.test(name))            return 'printer';
+  return 'pc';
 }
-function iconForType(type){
-  return type==='firewall' ? '🔥' : type==='switch' ? '🔀' : type==='printer' ? '🖨️' : type==='tablet' ? '📱' : '💻';
+function iconForType(type) {
+  const t = DEVICE_TYPES.find(d => d.id === type);
+  return t ? t.icon : '💻';
 }
-function iconFor(name){
-  const type = loadDeviceTypes()[name] || inferDeviceType(name);
-  return iconForType(type);
+function iconFor(name) {
+  const types = loadLS('netmon_device_types', {});
+  return iconForType(types[name] || inferDeviceType(name));
 }
 
-// ── TABS ──────────────────────────────────────────
-function switchTab(tab) {
+// ── LOCAL STORAGE HELPERS ────────────────────────────────────
+function loadLS(key, def) {
+  try { return JSON.parse(localStorage.getItem(key) || 'null') ?? def; } catch { return def; }
+}
+function saveLS(key, val) {
+  try { localStorage.setItem(key, JSON.stringify(val)); } catch {}
+}
+const loadDeviceTypes    = () => loadLS('netmon_device_types',    {});
+const saveDeviceTypes    = v  => saveLS('netmon_device_types',    v);
+const loadDeviceAliases  = () => loadLS('netmon_device_aliases',  {});
+const saveDeviceAliases  = v  => saveLS('netmon_device_aliases',  v);
+const loadTopoPositions  = () => loadLS('netmon_topo_positions',  {});
+const saveTopoPositions  = v  => saveLS('netmon_topo_positions',  v);
+const loadTopoCanvas     = () => loadLS('netmon_topo_canvas',     {});
+const saveTopoCanvas     = v  => saveLS('netmon_topo_canvas',     v);
+const loadTopoLock       = () => localStorage.getItem('netmon_topo_locked') === '1';
+const saveTopoLock       = v  => localStorage.setItem('netmon_topo_locked', v ? '1' : '0');
+const loadNotifications  = () => loadLS('netmon_notifications',   []);
+const saveNotifications  = v  => saveLS('netmon_notifications',   v);
+const loadDeviceInfo     = () => loadLS('netmon_device_info',     {});
+const saveDeviceInfo     = v  => saveLS('netmon_device_info',     v);
+
+// ── TABS ─────────────────────────────────────────────────────
+function switchTab(tab, el) {
   activeTab = tab;
   document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
-  document.getElementById('view-monitor').style.display  = tab==='monitor'  ? 'block' : 'none';
-  document.getElementById('view-topology').style.display = tab==='topology' ? 'block' : 'none';
-  document.getElementById('view-history').style.display  = tab==='history' ? 'block' : 'none';
-  document.getElementById('filter-row').style.display    = tab==='monitor'  ? 'flex'  : 'none';
-  document.querySelector('.prog-track').style.display    = tab==='monitor'  ? 'block' : 'none';
-  document.querySelector('.meta').style.display          = tab==='monitor'  ? 'flex'  : 'none';
-  document.querySelector('.alert-wrap').style.display    = tab==='monitor'  ? 'block' : 'none';
+  if (el) el.classList.add('active');
+  const views = ['monitor','dashboard','topology','history'];
+  views.forEach(v => {
+    const el2 = document.getElementById('view-'+v);
+    if (el2) el2.style.display = v===tab ? (v==='monitor'?'block':'block') : 'none';
+  });
+  document.getElementById('filter-row').style.display       = tab==='monitor'  ? 'flex'  : 'none';
+  document.querySelector('.prog-track').style.display       = tab==='monitor'  ? 'block' : 'none';
+  document.querySelector('.meta').style.display             = tab==='monitor'  ? 'flex'  : 'none';
+  document.querySelector('.alert-wrap').style.display       = tab==='monitor'  ? 'block' : 'none';
   if (tab==='topology' && currentDevices.length) renderTopology(currentDevices);
-  if (tab==='history') initHistoryTab();
+  if (tab==='history')  { initHistoryTab(); renderEventLog(); }
+  if (tab==='dashboard') renderDashboard();
 }
 
-// ── FILTER ────────────────────────────────────────
-function setFilter(mode) {
+function switchHistoryTab(tab, el) {
+  activeHTab = tab;
+  document.querySelectorAll('.htab').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  ['log','device','daily'].forEach(t => {
+    const e = document.getElementById('htab-'+t);
+    if (e) e.style.display = t===tab ? 'block' : 'none';
+  });
+  if (tab==='log')    renderEventLog();
+  if (tab==='device') initHistoryDeviceSelect();
+  if (tab==='daily')  renderDailyReport();
+}
+
+// ── FILTER & SEARCH ──────────────────────────────────────────
+function setFilter(mode, el) {
   filterMode = mode;
   document.querySelectorAll('.filter-row .flt').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+  if (el) el.classList.add('active');
   if (currentDevices.length) renderMonitor(currentDevices);
 }
 
-// ── COUNTDOWN ─────────────────────────────────────
+function setLogFilter(mode, el) {
+  logFilterMode = mode;
+  document.querySelectorAll('#htab-log .flt').forEach(b => b.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderEventLog();
+}
+
+function onSearch(q) {
+  searchQuery = q.trim().toLowerCase();
+  document.getElementById('searchClear').style.display = q ? 'block' : 'none';
+  if (currentDevices.length) renderMonitor(currentDevices);
+}
+function clearSearch() {
+  searchQuery = '';
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchClear').style.display = 'none';
+  document.getElementById('searchCount').textContent = '';
+  if (currentDevices.length) renderMonitor(currentDevices);
+}
+
+// ── COUNTDOWN ────────────────────────────────────────────────
 function startCD() {
-  clearInterval(cdT); cdN = REFRESH;
-  cdT = setInterval(() => {
+  clearInterval(cdTimer); cdN = REFRESH;
+  cdTimer = setInterval(() => {
     cdN--;
-    document.getElementById('prog').style.width = (cdN/REFRESH*100)+'%';
+    const pct = (cdN / REFRESH * 100);
+    document.getElementById('prog').style.width = pct + '%';
     document.getElementById('cdTxt').textContent = `Refresh in ${cdN}s`;
-    if (cdN<=0) doLoad();
+    if (cdN <= 0) doLoad();
   }, 1000);
 }
 
-// ── RENDER MONITOR ────────────────────────────────
+// ── RENDER MONITOR ───────────────────────────────────────────
 function renderMonitor(devices) {
   const map = {}; devices.forEach(d => map[d.ip] = d);
-  let up=0, dn=0, downs=[], h='';
+  const aliases = loadDeviceAliases();
+  let up=0, dn=0, downs=[], h='', matchCount=0;
 
   for (const [zone, list] of Object.entries(ZONES)) {
-    const aliases = loadDeviceAliases();
-    const zd = list.map(d => ({...d, status: map[d.ip]?.status||'unknown', down_duration: map[d.ip]?.down_duration||'', display_name: aliases[d.ip] || d.name}));
-    const zUp = zd.filter(d=>d.status==='up').length;
-    const zDn = zd.length - zUp;
-    let zh='';
-    zd.forEach(d => {
-      const isUp = d.status==='up';
-      const show = filterMode==='all'||(filterMode==='online'&&isUp)||(filterMode==='offline'&&!isUp);
-      if (!show) return;
-      isUp?up++:(dn++,downs.push(d));
-      const dur = !isUp&&d.down_duration?`<div class="dcard-dur">${d.down_duration}</div>`:'';
-      zh += `<div class="dcard ${isUp?'up':'down'}" style="cursor:pointer" onclick="openDeviceModal(${JSON.stringify(d.name)}, ${JSON.stringify(d.ip)})"><div class="dcard-top"><div class="dcard-name">${d.display_name}</div><span class="badge">${isUp?'UP':'DOWN'}</span></div><div class="dcard-ip">${d.ip}</div>${dur}</div>`;
+    const zd = list.map(d => {
+      const alias = aliases[d.ip] || d.name;
+      return {
+        ...d,
+        status:        map[d.ip]?.status || 'unknown',
+        down_duration: map[d.ip]?.down_duration || '',
+        display_name:  alias
+      };
     });
-    if (zh) h+=`<div class="zone-hdr"><span class="zone-name">${zone}</span><span class="zone-line"></span><span class="zone-count" style="${zDn>0&&filterMode!=='online'?'color:var(--down);border-color:rgba(255,77,109,.3)':''}">${filterMode==='offline'?zDn:zUp}/${zd.length}</span></div><div class="grid">${zh}</div>`;
+
+    let zh = '';
+    let zMatch = 0;
+    zd.forEach(d => {
+      const isUp = d.status === 'up';
+      const showFilter = filterMode==='all' || (filterMode==='online'&&isUp) || (filterMode==='offline'&&!isUp);
+      // search filter
+      const showSearch = !searchQuery ||
+        d.display_name.toLowerCase().includes(searchQuery) ||
+        d.name.toLowerCase().includes(searchQuery) ||
+        d.ip.includes(searchQuery);
+      if (!showFilter || !showSearch) return;
+      isUp ? up++ : (dn++, downs.push(d));
+      matchCount++;
+      zMatch++;
+      const icon = iconFor(d.name);
+      const dur  = !isUp && d.down_duration
+        ? `<div class="dcard-dur">${d.down_duration}</div>` : '';
+      const safe = JSON.stringify;
+      zh += `<div class="dcard ${isUp?'up':'down'}" onclick="openDeviceModal(${safe(d.name)},${safe(d.ip)})">
+        <div class="dcard-top">
+          <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
+            <span class="dcard-icon">${icon}</span>
+            <div class="dcard-info">
+              <div class="dcard-name">${d.display_name}</div>
+              <div class="dcard-ip">${d.ip}</div>
+            </div>
+          </div>
+          <span class="badge">${isUp?'UP':'DOWN'}</span>
+        </div>${dur}</div>`;
+    });
+
+    const zUp = zd.filter(x=>x.status==='up').length;
+    const zDn = zd.length - zUp;
+    if (zh) {
+      const cntStyle = zDn>0&&filterMode!=='online' ? 'color:var(--down);border-color:rgba(255,64,96,.3)' : '';
+      h += `<div class="zone-hdr"><span class="zone-name">${zone}</span><span class="zone-line"></span><span class="zone-count" style="${cntStyle}">${filterMode==='offline'?zDn:zUp}/${zd.length}</span></div><div class="grid">${zh}</div>`;
+    }
   }
 
-  document.getElementById('main').innerHTML = h;
-  document.getElementById('nUp').textContent = up;
-  document.getElementById('nDn').textContent = dn;
-  document.getElementById('nTt').textContent = up+dn;
-  document.title = dn>0?`⚠️ ${dn} Offline · VLAN62`:'✅ All Online · VLAN62';
+  document.getElementById('main').innerHTML = h || `<div style="padding:40px;text-align:center;color:var(--muted)">No devices match your search</div>`;
+  animateStatNum('nUp', up);
+  animateStatNum('nDn', dn);
+  animateStatNum('nTt', up+dn);
+  animateStatNum('nUpt', (up+dn)>0 ? Math.round(up/(up+dn)*100)+'%' : '—');
+  animateStatNum('nEvt', currentEvents.length);
+  animateStatNum('nAlt', dn);
 
+  // search count
+  if (searchQuery) {
+    document.getElementById('searchCount').textContent = matchCount ? `${matchCount}` : '0';
+  } else {
+    document.getElementById('searchCount').textContent = '';
+  }
+
+  document.title = dn>0 ? `⚠️ ${dn} Offline · VLAN62` : '✅ All Online · VLAN62';
   const badge = document.getElementById('liveBadge');
-  if (dn>0) {
-    badge.className='live warn';
-    document.getElementById('liveText').textContent=`${dn} DOWN`;
+  if (dn > 0) {
+    badge.className = 'live warn';
+    document.getElementById('liveText').textContent = `${dn} DOWN`;
     renderOfflineAlert(downs);
   } else {
-    badge.className='live';
-    document.getElementById('liveText').textContent='ALL ONLINE';
+    badge.className = 'live';
+    document.getElementById('liveText').textContent = 'ALL ONLINE';
     renderOfflineAlert([]);
+  }
+  updateNotifBadge();
+}
+
+function animateStatNum(id, val) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const str = String(val);
+  if (el.textContent !== str) {
+    el.textContent = str;
+    el.classList.remove('updated');
+    void el.offsetWidth;
+    el.classList.add('updated');
   }
 }
 
 function renderOfflineAlert(downs) {
-  if (downs.length > 0) {
-    document.getElementById('alertBody').innerHTML = downs.map(d=>`<div class="alert-row"><div><div style="font-weight:600">${d.name}</div><div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${d.ip}</div></div>${d.down_duration?`<span class="alert-dur">${d.down_duration}</span>`:''}</div>`).join('');
-    document.getElementById('alertBox').style.display='block';
-  } else {
-    document.getElementById('alertBox').style.display='none';
+  const box = document.getElementById('alertBox');
+  if (!downs.length) { box.style.display='none'; return; }
+  document.getElementById('alertBody').innerHTML = downs.map(d =>
+    `<div class="alert-row">
+      <div>
+        <div style="font-weight:600">${d.display_name||d.name}</div>
+        <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${d.ip}</div>
+      </div>
+      ${d.down_duration?`<span class="alert-dur">${d.down_duration}</span>`:''}
+    </div>`
+  ).join('');
+  box.style.display = 'block';
+}
+
+// ── DASHBOARD ────────────────────────────────────────────────
+function renderDashboard() {
+  const up   = currentDevices.filter(d=>d.status==='up').length;
+  const dn   = currentDevices.filter(d=>d.status==='down').length;
+  const tot  = up + dn;
+  const uptPct = tot ? Math.round(up/tot*100) : 0;
+  const dwnPct = tot ? Math.round(dn/tot*100) : 0;
+
+  // calc avg downtime from events
+  const upEvts = currentEvents.filter(e=>e.type==='UP'&&e.duration);
+  let totalSec = 0;
+  upEvts.forEach(e => totalSec += parseDuration(e.duration));
+  const avgSec = upEvts.length ? Math.round(totalSec/upEvts.length) : 0;
+  const avgStr = avgSec ? formatSeconds(avgSec) : '—';
+
+  // last incident
+  const downs = currentEvents.filter(e=>e.type==='DOWN');
+  const lastInc = downs.length ? downs[downs.length-1] : null;
+  const lastIncStr = lastInc ? `${lastInc.name} (${lastInc.ts.split(' ')[1]||lastInc.ts})` : 'None';
+
+  document.getElementById('dashCards').innerHTML = `
+    <div class="dash-card c-up">
+      <div class="dash-value" id="dv-up">${uptPct}%</div>
+      <div class="dash-label">Uptime Rate</div>
+      <div class="dash-sub">${up} of ${tot} devices online</div>
+      <div class="dash-bar"><div class="dash-bar-fill" style="width:${uptPct}%"></div></div>
+      <div class="dash-icon">✅</div>
+    </div>
+    <div class="dash-card c-down">
+      <div class="dash-value">${dwnPct}%</div>
+      <div class="dash-label">Offline Rate</div>
+      <div class="dash-sub">${dn} device${dn!==1?'s':''} currently down</div>
+      <div class="dash-bar"><div class="dash-bar-fill" style="width:${dwnPct}%"></div></div>
+      <div class="dash-icon">⚠️</div>
+    </div>
+    <div class="dash-card c-blue">
+      <div class="dash-value">${tot}</div>
+      <div class="dash-label">Total Devices</div>
+      <div class="dash-sub">VLAN 62 · 10.0.62.x</div>
+      <div class="dash-icon">🖥️</div>
+    </div>
+    <div class="dash-card c-warn">
+      <div class="dash-value" style="font-size:20px;padding-top:4px">${avgStr}</div>
+      <div class="dash-label">Avg Downtime</div>
+      <div class="dash-sub">Per incident (${upEvts.length} resolved)</div>
+      <div class="dash-icon">⏱️</div>
+    </div>
+    <div class="dash-card c-purple">
+      <div class="dash-value">${currentEvents.length}</div>
+      <div class="dash-label">Total Events</div>
+      <div class="dash-sub">${downs.length} down · ${upEvts.length} recovered</div>
+      <div class="dash-icon">📊</div>
+    </div>
+    <div class="dash-card c-teal">
+      <div class="dash-value" style="font-size:16px;padding-top:6px">${lastIncStr}</div>
+      <div class="dash-label">Last Incident</div>
+      <div class="dash-sub">${lastInc ? lastInc.ts : 'No incidents recorded'}</div>
+      <div class="dash-icon">🕐</div>
+    </div>
+  `;
+  renderEventChart();
+}
+
+function renderEventChart() {
+  const canvas = document.getElementById('eventChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth || 600;
+  canvas.width = W;
+
+  // bucket events by hour (last 24h)
+  const now = Date.now();
+  const buckets = Array(24).fill(0).map((_,i)=>({h:i,down:0,up:0}));
+  currentEvents.forEach(e => {
+    const d = parseEventDate(e.ts);
+    if (!d) return;
+    const diff = Math.floor((now - d) / 3600000);
+    if (diff >= 0 && diff < 24) {
+      const idx = 23 - diff;
+      if (e.type==='DOWN') buckets[idx].down++;
+      else buckets[idx].up++;
+    }
+  });
+
+  const maxVal = Math.max(1, ...buckets.map(b=>b.down+b.up));
+  const H = 120; const pad = 30; const bw = Math.floor((W-pad*2)/24)-2;
+  ctx.clearRect(0,0,W,H+20);
+
+  buckets.forEach((b, i) => {
+    const x = pad + i*((W-pad*2)/24);
+    if (b.down > 0) {
+      const barH = Math.max(3, Math.round(b.down/maxVal*(H-10)));
+      ctx.fillStyle = 'rgba(255,64,96,.7)';
+      ctx.fillRect(x, H-barH, Math.max(bw,2), barH);
+    }
+    if (b.up > 0) {
+      const barH2 = Math.max(3, Math.round(b.up/maxVal*(H-10)));
+      ctx.fillStyle = 'rgba(0,229,160,.55)';
+      ctx.fillRect(x, H-barH2-(b.down>0?Math.round(b.down/maxVal*(H-10)):0), Math.max(bw,2), barH2);
+    }
+  });
+
+  // x-axis labels
+  ctx.fillStyle = 'rgba(74,96,128,.7)';
+  ctx.font = '9px JetBrains Mono, monospace';
+  for (let i=0;i<24;i+=4) {
+    const x = pad + i*((W-pad*2)/24);
+    const h = new Date(now - (23-i)*3600000).getHours();
+    ctx.fillText(h+'h', x, H+14);
   }
 }
 
-// ── RENDER TOPOLOGY ───────────────────────────────
+function parseEventDate(ts) {
+  if (!ts) return null;
+  // format: DD/MM/YYYY HH:MM:SS
+  const m = ts.match(/(\d{2})\/(\d{2})\/(\d{4}) (\d{2}):(\d{2}):(\d{2})/);
+  if (m) return new Date(m[3],m[2]-1,m[1],m[4],m[5],m[6]).getTime();
+  return null;
+}
+
+// ── TOPOLOGY ─────────────────────────────────────────────────
 function renderTopology(devices) {
   const map = {}; devices.forEach(d => map[d.ip] = d);
-  topologyLocked = loadTopologyLock();
-  updateTopologyLockButton();
-  const positions = loadTopologyPositions();
-  const aliases = loadDeviceAliases();
-  const flat = Object.values(ZONES).flat();
-  const savedCanvas = loadTopologyCanvas();
-  const canvas = savedCanvas && savedCanvas.w && savedCanvas.h ? savedCanvas : computeAutoTopologyCanvasSize(flat, positions);
-  if (!savedCanvas || !savedCanvas.w || !savedCanvas.h) saveTopologyCanvas(canvas);
-  const downs = flat.filter(d => map[d.ip]?.status === 'down').map(d => ({
-    name: d.name,
-    ip: d.ip,
-    down_duration: map[d.ip]?.down_duration || ''
-  }));
+  topoLocked = loadTopoLock();
+  updateTopoLockBtn();
+  const positions = loadTopoPositions();
+  const aliases   = loadDeviceAliases();
+  const flat      = Object.values(ZONES).flat();
+
+  const saved = loadTopoCanvas();
+  const canvas = saved.w && saved.h ? saved : computeTopoSize(flat, positions);
+  if (!saved.w || !saved.h) saveTopoCanvas(canvas);
+
+  const downs = flat.filter(d => map[d.ip]?.status==='down').map(d=>({name:d.name,ip:d.ip,down_duration:map[d.ip]?.down_duration||''}));
+
   let nodesHtml = '';
   flat.forEach((d, idx) => {
-    const displayName = aliases[d.ip] || d.name;
-    const s = map[d.ip]?.status||'unknown';
-    const isUp = s==='up';
-    const dur = !isUp&&map[d.ip]?.down_duration?map[d.ip].down_duration:'';
-    const pos = positions[d.ip] || defaultTopologyPosition(idx);
-    nodesHtml+=`<div class="topo-node ${isUp?'up':'down'}" data-ip="${d.ip}" style="left:${pos.x}px;top:${pos.y}px" ondblclick="openDeviceModal(${JSON.stringify(d.name)}, ${JSON.stringify(d.ip)})" title="${displayName}\n${d.ip}${dur? '\nDown: '+dur:''}\n(ดับ/กลับมา: Double-click)">
-        <div class="topo-icon">${iconFor(d.name)}</div>
-        <div class="topo-name">${displayName}</div>
-        <div class="topo-ip">${d.ip.split('.').pop()}</div>
-        <div class="topo-status">${isUp?'UP':'DOWN'}</div>
-        ${dur?`<div style="font-size:9px;color:var(--down);margin-top:2px;font-family:var(--mono)">${dur}</div>`:''}
-      </div>`;
+    const dname = aliases[d.ip] || d.name;
+    const s     = map[d.ip]?.status || 'unknown';
+    const isUp  = s === 'up';
+    const dur   = !isUp && map[d.ip]?.down_duration ? map[d.ip].down_duration : '';
+    const pos   = positions[d.ip] || defaultTopoPos(idx);
+    const safe  = JSON.stringify;
+    nodesHtml += `<div class="topo-node ${isUp?'up':'down'}" data-ip="${d.ip}" style="left:${pos.x}px;top:${pos.y}px"
+      ondblclick="openDeviceModal(${safe(d.name)},${safe(d.ip)})"
+      title="${dname}\n${d.ip}${dur?'\nDown: '+dur:''}\n(Double-click to edit)">
+      <div class="topo-icon">${iconFor(d.name)}</div>
+      <div class="topo-name">${dname}</div>
+      <div class="topo-ip">.${d.ip.split('.').pop()}</div>
+      <div class="topo-status">${isUp?'UP':'DOWN'}</div>
+      ${dur?`<div style="font-size:8px;color:var(--down);margin-top:2px;font-family:var(--mono)">${dur}</div>`:''}
+    </div>`;
   });
-  const grid = document.getElementById('topoGrid');
-  grid.innerHTML = `<div class="topo-canvas" id="topoCanvas" style="width:${canvas.w}px;height:${canvas.h}px;position:relative">${nodesHtml}</div>`;
-  grid.classList.toggle('locked', topologyLocked);
-  initTopologyDrag();
-  updateCanvasLabel();
+
+  // Connection SVG — connect Firewall → Switch → all others
+  const fw   = flat.find(d=>d.name==='Firewall');
+  const sw   = flat.find(d=>d.name==='Core Switch');
+  const fwPos= fw ? (positions[fw.ip]||defaultTopoPos(flat.indexOf(fw))) : null;
+  const swPos= sw ? (positions[sw.ip]||defaultTopoPos(flat.indexOf(sw))) : null;
+  const cx   = 48; const cy = 47; // node center offsets
+
+  let svgLines = '';
+  if (fwPos && swPos) {
+    const x1=fwPos.x+cx, y1=fwPos.y+cy, x2=swPos.x+cx, y2=swPos.y+cy;
+    svgLines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(0,200,255,.35)" stroke-width="2" stroke-dasharray="6,4"/>`;
+    // connect switch to zone representatives
+    flat.forEach((d, idx) => {
+      if (d.ip===fw.ip||d.ip===sw.ip) return;
+      const pos2 = positions[d.ip]||defaultTopoPos(idx);
+      const isUp = map[d.ip]?.status==='up';
+      const color= isUp ? 'rgba(0,229,160,.15)' : 'rgba(255,64,96,.2)';
+      svgLines += `<line x1="${swPos.x+cx}" y1="${swPos.y+cy}" x2="${pos2.x+cx}" y2="${pos2.y+cy}" stroke="${color}" stroke-width="1" stroke-dasharray="4,6"/>`;
+    });
+  }
+
+  const grid = document.getElementById('topoCanvas');
+  grid.style.width  = canvas.w + 'px';
+  grid.style.height = canvas.h + 'px';
+  grid.innerHTML = `<svg class="topo-svg" width="${canvas.w}" height="${canvas.h}" id="topoSvg">${svgLines}</svg>${nodesHtml}`;
+
+  document.getElementById('topoGrid').classList.toggle('locked', topoLocked);
+  applyZoom();
+  initTopoDrag();
+  renderMinimap(flat, positions, map);
   renderOfflineAlert(downs);
 }
 
-// ── FETCH DATA ────────────────────────────────────
+function renderMinimap(flat, positions, map) {
+  const mc = document.getElementById('minimapCanvas');
+  if (!mc) return;
+  const cv = loadTopoCanvas();
+  const mw=140, mh=90;
+  const sx = mw/(cv.w||800), sy = mh/(cv.h||500);
+  let html = '';
+  flat.forEach((d,idx) => {
+    const pos = positions[d.ip]||defaultTopoPos(idx);
+    const isUp = map[d.ip]?.status==='up';
+    const x = Math.round(pos.x*sx), y = Math.round(pos.y*sy);
+    html += `<div class="minimap-node" style="left:${x}px;top:${y}px;width:5px;height:5px;background:${isUp?'var(--up)':'var(--down)'};opacity:${isUp?.6:.9}"></div>`;
+  });
+  mc.innerHTML = html;
+}
+
+function zoomTopo(delta) {
+  topoZoom = Math.max(0.3, Math.min(2.5, topoZoom + delta));
+  applyZoom();
+}
+function zoomReset() { topoZoom = 1; applyZoom(); }
+function applyZoom() {
+  const outer = document.getElementById('topoOuter');
+  if (outer) outer.style.transform = `scale(${topoZoom})`;
+  document.getElementById('zoomLevel').textContent = Math.round(topoZoom*100)+'%';
+}
+
+function autoArrangeTopology() {
+  const flat = Object.values(ZONES).flat();
+  const positions = {};
+  const cols = 8;
+  flat.forEach((d, idx) => {
+    positions[d.ip] = { x: 12 + (idx%cols)*108, y: 12 + Math.floor(idx/cols)*120 };
+  });
+  saveTopoPositions(positions);
+  const canvas = computeTopoSize(flat, positions);
+  saveTopoCanvas(canvas);
+  if (currentDevices.length) renderTopology(currentDevices);
+}
+
+function groupByZone() {
+  const flat = Object.values(ZONES).flat();
+  const positions = {};
+  let gx=12, gy=12, colH=0, zoneIdx=0;
+  const zoneKeys = Object.keys(ZONES);
+  zoneKeys.forEach((zone, zi) => {
+    const list = ZONES[zone];
+    const cols = Math.min(4, list.length);
+    list.forEach((d, idx) => {
+      positions[d.ip] = { x: gx + (idx%cols)*108, y: gy + Math.floor(idx/cols)*120 };
+    });
+    const rows = Math.ceil(list.length/cols);
+    gx += cols*108 + 24;
+    if ((zi+1)%3===0) { gx=12; gy += rows*120+40; }
+  });
+  saveTopoPositions(positions);
+  const canvas = computeTopoSize(flat, positions);
+  saveTopoCanvas(canvas);
+  if (currentDevices.length) renderTopology(currentDevices);
+}
+
+function computeTopoSize(flat, positions) {
+  let mx=0, my=0;
+  flat.forEach((d,idx)=>{
+    const p=positions[d.ip]||defaultTopoPos(idx);
+    mx=Math.max(mx,p.x+100); my=Math.max(my,p.y+110);
+  });
+  return { w: Math.max(720,Math.min(2400,mx+40)), h: Math.max(420,Math.min(1600,my+40)) };
+}
+function defaultTopoPos(idx) {
+  return { x: 12+(idx%8)*108, y: 12+Math.floor(idx/8)*120 };
+}
+function autoFitTopologyCanvas() {
+  const flat = Object.values(ZONES).flat();
+  const pos  = loadTopoPositions();
+  const cv   = computeTopoSize(flat, pos);
+  saveTopoCanvas(cv);
+  const c = document.getElementById('topoCanvas');
+  if (c) { c.style.width=cv.w+'px'; c.style.height=cv.h+'px'; }
+}
+function toggleTopologyLock() { topoLocked=!topoLocked; saveTopoLock(topoLocked); updateTopoLockBtn(); document.getElementById('topoGrid').classList.toggle('locked', topoLocked); }
+function updateTopoLockBtn() {
+  const btn=document.getElementById('topoLockBtn');
+  if (btn) btn.textContent = topoLocked ? '🔒 Locked' : '🔓 Lock';
+}
+
+// ── DRAG ─────────────────────────────────────────────────────
+function initTopoDrag() {
+  document.querySelectorAll('.topo-node').forEach(node => {
+    node.addEventListener('mousedown', startTopoDrag);
+    node.addEventListener('touchstart', startTopoDrag, {passive:false});
+  });
+}
+function startTopoDrag(event) {
+  if (topoLocked) return;
+  event.preventDefault();
+  const node = event.currentTarget;
+  const ip   = node.dataset.ip;
+  const parent = node.parentElement;
+  const px = event.touches ? event.touches[0].clientX : event.clientX;
+  const py = event.touches ? event.touches[0].clientY : event.clientY;
+  const rect = node.getBoundingClientRect();
+  const pRect= parent.getBoundingClientRect();
+  const offX = (px - rect.left) / topoZoom;
+  const offY = (py - rect.top) / topoZoom;
+  node.classList.add('dragging');
+
+  function onMove(e) {
+    const mx = e.touches ? e.touches[0].clientX : e.clientX;
+    const my = e.touches ? e.touches[0].clientY : e.clientY;
+    let x = (mx - pRect.left)/topoZoom - offX;
+    let y = (my - pRect.top) /topoZoom - offY;
+    x = Math.max(4, x); y = Math.max(4, y);
+    node.style.left = x+'px'; node.style.top = y+'px';
+  }
+  function onUp() {
+    document.removeEventListener('mousemove', onMove);
+    document.removeEventListener('mouseup', onUp);
+    document.removeEventListener('touchmove', onMove);
+    document.removeEventListener('touchend', onUp);
+    node.classList.remove('dragging');
+    const pos = loadTopoPositions();
+    pos[ip] = { x: parseInt(node.style.left,10), y: parseInt(node.style.top,10) };
+    saveTopoPositions(pos);
+    // Update SVG lines after drag
+    if (currentDevices.length) {
+      const map={}; currentDevices.forEach(d=>map[d.ip]=d);
+      renderMinimap(Object.values(ZONES).flat(), pos, map);
+    }
+  }
+  document.addEventListener('mousemove', onMove);
+  document.addEventListener('mouseup', onUp);
+  document.addEventListener('touchmove', onMove, {passive:false});
+  document.addEventListener('touchend', onUp);
+}
+
+// ── EVENT LOG / HISTORY ──────────────────────────────────────
+function renderEventLog() {
+  const evts = (logFilterMode==='all' ? currentEvents : currentEvents.filter(e=>e.type===logFilterMode.toUpperCase()))
+    .slice().reverse().slice(0, 200);
+  if (!evts.length) {
+    document.getElementById('evLog').innerHTML = '<div style="padding:30px;color:var(--muted);text-align:center">No events recorded</div>';
+    return;
+  }
+  document.getElementById('evLog').innerHTML = evts.map(e => {
+    const isDown = e.type==='DOWN';
+    return `<div class="ev-item ${isDown?'down-ev':'up-ev'}">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
+        <span class="ev-type" style="color:${isDown?'var(--down)':'var(--up)'}">${e.type}</span>
+        <span class="ev-ts">${e.ts}</span>
+      </div>
+      <div class="ev-name">${e.name}</div>
+      <div class="ev-ip">${e.ip}</div>
+      ${e.duration?`<div class="ev-dur" style="color:${isDown?'var(--down)':'var(--up)'}">Duration: ${e.duration}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function initHistoryTab() {
+  if (activeHTab==='device') initHistoryDeviceSelect();
+  if (activeHTab==='log') renderEventLog();
+  if (activeHTab==='daily') renderDailyReport();
+}
+function initHistoryDeviceSelect() {
+  const sel = document.getElementById('historyDeviceSelect');
+  if (!sel) return;
+  const aliases = loadDeviceAliases();
+  const flat = Object.values(ZONES).flat();
+  sel.innerHTML = '<option value="">— Choose a device —</option>' +
+    flat.map(d=>`<option value="${d.ip}">${aliases[d.ip]||d.name} (${d.ip})</option>`).join('');
+  document.getElementById('historyContent').innerHTML = '';
+}
+
+function showDeviceHistoryDetail() {
+  const ip = document.getElementById('historyDeviceSelect').value;
+  if (!ip) { document.getElementById('historyContent').innerHTML=''; return; }
+  const flat  = Object.values(ZONES).flat();
+  const device= flat.find(d=>d.ip===ip);
+  if (!device) return;
+  const aliases= loadDeviceAliases();
+  const alias  = aliases[ip]||device.name;
+  const types  = loadDeviceTypes();
+  const type   = types[device.name]||inferDeviceType(device.name);
+  const events = currentEvents.filter(e=>e.name===device.name||e.ip===ip).slice().reverse();
+  const stats  = calcDeviceStats(events);
+  const info   = loadDeviceInfo()[ip]||{};
+  const devStat= currentDevices.find(d=>d.ip===ip);
+  const isUp   = devStat?.status==='up';
+
+  const rows = events.length ? events.map(e=>{
+    const isD=e.type==='DOWN';
+    return `<div class="ev-item ${isD?'down-ev':'up-ev'}" style="margin-left:0;padding-left:12px">
+      <div style="display:flex;justify-content:space-between">
+        <span style="font-weight:700;color:${isD?'var(--down)':'var(--up)'};font-size:11px;font-family:var(--mono)">${e.type}</span>
+        <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">${e.ts}</span>
+      </div>
+      ${e.duration?`<div style="font-size:11px;color:${isD?'var(--down)':'var(--up)'};margin-top:3px">⏱ ${e.duration}</div>`:''}
+    </div>`;
+  }).join('') : '<div style="padding:20px;color:var(--muted)">No events for this device</div>';
+
+  document.getElementById('historyContent').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+      <div style="font-size:36px">${iconForType(type)}</div>
+      <div>
+        <div style="font-size:18px;font-weight:800">${alias}</div>
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono)">${ip}</div>
+        <div style="margin-top:4px"><span style="font-size:11px;padding:2px 8px;border-radius:4px;font-family:var(--mono);font-weight:700;background:${isUp?'var(--up-s)':'var(--down-s)'};color:${isUp?'var(--up)':'var(--down)'}">${isUp?'ONLINE':'OFFLINE'}</span></div>
+      </div>
+    </div>
+    <div class="dstat-grid" style="margin-bottom:14px">
+      <div class="dstat"><div class="dstat-n" style="color:var(--down)">${stats.downCount}</div><div class="dstat-l">Times Down</div></div>
+      <div class="dstat"><div class="dstat-n" style="color:var(--up)">${stats.upCount}</div><div class="dstat-l">Recovered</div></div>
+      <div class="dstat"><div class="dstat-n" style="color:var(--warn);font-size:14px">${stats.formattedDowntime}</div><div class="dstat-l">Total Downtime</div></div>
+    </div>
+    <div style="font-weight:700;font-size:13px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)">Event History</div>
+    <div style="max-height:400px;overflow-y:auto" class="ev-timeline">${rows}</div>
+  `;
+}
+
+function renderDailyReport() {
+  const el = document.getElementById('dailyReport');
+  if (!el) return;
+  // Group events by date
+  const byDate = {};
+  currentEvents.forEach(e=>{
+    const date = e.ts.split(' ')[0]||'Unknown';
+    if (!byDate[date]) byDate[date]=[]; byDate[date].push(e);
+  });
+  const dates = Object.keys(byDate).sort((a,b)=>b.localeCompare(a)).slice(0,30);
+  if (!dates.length) { el.innerHTML='<div style="color:var(--muted);padding:30px;text-align:center">No event data available</div>'; return; }
+  el.innerHTML = dates.map(date=>{
+    const evts = byDate[date];
+    const downs= evts.filter(e=>e.type==='DOWN').length;
+    const ups  = evts.filter(e=>e.type==='UP').length;
+    return `<div class="chart-wrap" style="margin-bottom:10px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div style="font-weight:700;font-size:14px">${date}</div>
+        <div style="display:flex;gap:10px">
+          <span style="font-size:12px;color:var(--down)">↓ ${downs} DOWN</span>
+          <span style="font-size:12px;color:var(--up)">↑ ${ups} UP</span>
+        </div>
+      </div>
+      <div style="max-height:200px;overflow-y:auto">
+        ${evts.slice().reverse().map(e=>`<div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:12px">
+          <span style="color:${e.type==='DOWN'?'var(--down)':'var(--up)'};font-weight:700;font-family:var(--mono)">${e.type}</span>
+          <span>${e.name}</span>
+          <span style="color:var(--muted);font-family:var(--mono)">${e.ts.split(' ')[1]||''}</span>
+        </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── DEVICE MODAL ─────────────────────────────────────────────
+function openDeviceModal(name, ip) {
+  const events = currentEvents.filter(e=>e.name===name||e.ip===ip);
+  const stats  = calcDeviceStats(events);
+  const types  = loadDeviceTypes();
+  const aliases= loadDeviceAliases();
+  const info   = loadDeviceInfo();
+  const devInfo= info[ip]||{};
+  const selType= types[name]||inferDeviceType(name);
+  const alias  = aliases[ip]||name;
+  const devStat= currentDevices.find(d=>d.ip===ip);
+  const isUp   = devStat?.status==='up';
+  const lastSeen= devStat?.last_update||'—';
+  const dur    = devStat?.down_duration||'';
+
+  document.getElementById('modalTitle').textContent = alias;
+
+  // Type selector
+  const typeGrid = DEVICE_TYPES.map(t=>
+    `<div class="type-btn-card ${t.id===selType?'sel':''}" onclick="pickDeviceType(this,'${t.id}')" data-type="${t.id}">
+      <span class="ti">${t.icon}</span><span class="tl">${t.label}</span>
+    </div>`
+  ).join('');
+
+  document.getElementById('historyModalContent').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
+      <div style="font-size:40px" id="modal-dev-icon">${iconForType(selType)}</div>
+      <div>
+        <div style="font-size:18px;font-weight:800">${alias}</div>
+        <div style="font-size:12px;color:var(--muted);font-family:var(--mono)">${ip}</div>
+        <div style="margin-top:6px;display:flex;gap:8px">
+          <span style="font-size:11px;padding:2px 8px;border-radius:4px;font-family:var(--mono);font-weight:700;background:${isUp?'var(--up-s)':'var(--down-s)'};color:${isUp?'var(--up)':'var(--down)'}">${isUp?'ONLINE':'OFFLINE'}</span>
+          ${dur?`<span style="font-size:11px;padding:2px 8px;border-radius:4px;background:var(--down-s);color:var(--down);font-family:var(--mono)">↓ ${dur}</span>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="dstat-grid">
+      <div class="dstat"><div class="dstat-n" style="color:var(--down)">${stats.downCount}</div><div class="dstat-l">Down Events</div></div>
+      <div class="dstat"><div class="dstat-n" style="color:var(--up)">${stats.upCount}</div><div class="dstat-l">Recovered</div></div>
+      <div class="dstat"><div class="dstat-n" style="font-size:14px;color:var(--warn)">${stats.formattedDowntime}</div><div class="dstat-l">Total Down</div></div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Display Name (Alias)</label>
+      <input class="field-input" id="modal-alias" type="text" value="${alias}">
+    </div>
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">Description</label>
+        <input class="field-input" id="modal-desc" type="text" value="${devInfo.description||''}">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Site Name</label>
+        <input class="field-input" id="modal-site" type="text" value="${devInfo.site||'Dusit Thani'}">
+      </div>
+    </div>
+    <div class="field-row">
+      <div class="field-group">
+        <label class="field-label">VLAN</label>
+        <input class="field-input" id="modal-vlan" type="text" value="${devInfo.vlan||'62'}">
+      </div>
+      <div class="field-group">
+        <label class="field-label">Last Seen</label>
+        <input class="field-input" type="text" value="${lastSeen}" readonly style="opacity:.6">
+      </div>
+    </div>
+    <div class="field-group">
+      <label class="field-label">Device Type</label>
+      <div class="type-grid" id="typeGrid">${typeGrid}</div>
+      <input type="hidden" id="modal-type" value="${selType}">
+    </div>
+    <div style="font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:8px;margin-top:4px">Recent Events</div>
+    <div style="max-height:200px;overflow-y:auto">
+      ${events.length ? events.slice().reverse().slice(0,20).map(e=>{
+        const isD=e.type==='DOWN';
+        return `<div style="padding:7px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:12px">
+          <span style="font-weight:700;color:${isD?'var(--down)':'var(--up)'};font-family:var(--mono)">${e.type}</span>
+          <span style="color:var(--muted)">${e.ts}</span>
+          ${e.duration?`<span style="color:${isD?'var(--down)':'var(--up)'};font-family:var(--mono)">${e.duration}</span>`:''}
+        </div>`;
+      }).join('') : '<div style="color:var(--muted);padding:12px 0">No events recorded</div>'}
+    </div>
+  `;
+
+  document.getElementById('modalFoot').innerHTML = `
+    <button class="btn" onclick="saveModalDevice(${JSON.stringify(name)},${JSON.stringify(ip)})">💾 Save</button>
+    <button class="btn" onclick="closeModal()">Close</button>
+  `;
+
+  document.getElementById('historyModal').classList.add('open');
+}
+
+function pickDeviceType(btn, typeId) {
+  document.querySelectorAll('#typeGrid .type-btn-card').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.getElementById('modal-type').value = typeId;
+  const iconEl = document.getElementById('modal-dev-icon');
+  if (iconEl) iconEl.textContent = iconForType(typeId);
+}
+
+function saveModalDevice(name, ip) {
+  const types  = loadDeviceTypes();
+  const aliases= loadDeviceAliases();
+  const info   = loadDeviceInfo();
+  const newType = document.getElementById('modal-type').value;
+  const newAlias= (document.getElementById('modal-alias').value||'').trim();
+  const desc   = (document.getElementById('modal-desc').value||'').trim();
+  const site   = (document.getElementById('modal-site').value||'').trim();
+  const vlan   = (document.getElementById('modal-vlan').value||'').trim();
+  types[name] = newType;
+  if (newAlias && newAlias !== name) aliases[ip] = newAlias; else delete aliases[ip];
+  info[ip] = { description: desc, site, vlan };
+  saveDeviceTypes(types); saveDeviceAliases(aliases); saveDeviceInfo(info);
+  if (currentDevices.length) renderMonitor(currentDevices);
+  if (activeTab==='topology' && currentDevices.length) renderTopology(currentDevices);
+  closeModal();
+}
+
+function closeModal() { document.getElementById('historyModal').classList.remove('open'); }
+
+// ── TOPOLOGY ICON EDITOR ─────────────────────────────────────
+function openTopologyIconEditor() {
+  const types  = loadDeviceTypes();
+  const aliases= loadDeviceAliases();
+  let rows = '';
+  for (const [zone, list] of Object.entries(ZONES)) {
+    rows += `<div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:12px">${zone}</div>`;
+    list.forEach(d=>{
+      const selType = types[d.name]||inferDeviceType(d.name);
+      const alias   = aliases[d.ip]||d.name;
+      const safeIp  = d.ip.replace(/'/g,"\\'");
+      const safeName= d.name.replace(/'/g,"\\'");
+      const typeBtns= DEVICE_TYPES.map(t=>
+        `<button type="button" data-ttype-btn="${d.ip}" data-type="${t.id}" onclick="setDeviceTypeInEditor('${safeIp}','${t.id}')"
+          style="padding:6px;border-radius:7px;border:2px solid ${t.id===selType?'var(--accent)':'var(--border2)'};background:${t.id===selType?'rgba(0,200,255,.12)':'var(--surface)'};cursor:pointer;font-size:15px;transition:all .15s;width:36px;height:36px;display:flex;align-items:center;justify-content:center"
+          title="${t.label}">${t.icon}</button>`
+      ).join('');
+      rows += `<div style="padding:10px 0;border-bottom:1px solid var(--border)" data-device-ip="${d.ip}">
+        <div style="display:flex;gap:8px;margin-bottom:8px;align-items:center;flex-wrap:wrap">
+          <div style="min-width:120px">
+            <div style="font-size:13px;font-weight:600">${alias}</div>
+            <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${d.ip}</div>
+          </div>
+          <input id="editor-alias-${d.ip}" type="text" value="${alias}" style="flex:1;min-width:120px;padding:7px 10px;border-radius:7px;border:1px solid var(--border2);background:var(--surface);color:var(--text);font-family:var(--sans);font-size:12px;outline:none">
+        </div>
+        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;gap:4px">${typeBtns}</div>
+          <input type="hidden" id="editor-type-${d.ip}" value="${selType}">
+          <button class="btn sm" onclick="saveEditorDevice('${safeName}','${safeIp}')">Save</button>
+        </div>
+      </div>`;
+    });
+    rows += '</div>';
+  }
+
+  document.getElementById('modalTitle').textContent = 'Device Editor';
+  document.getElementById('historyModalContent').innerHTML = `<div style="max-height:65vh;overflow-y:auto">${rows}</div>`;
+  document.getElementById('modalFoot').innerHTML = `<button class="btn" onclick="closeModal()">Done</button>`;
+  document.getElementById('historyModal').classList.add('open');
+}
+
+function setDeviceTypeInEditor(ip, typeId) {
+  document.getElementById(`editor-type-${ip}`).value = typeId;
+  document.querySelectorAll(`[data-ttype-btn="${ip}"]`).forEach(btn=>{
+    const sel = btn.dataset.type===typeId;
+    btn.style.borderColor = sel?'var(--accent)':'var(--border2)';
+    btn.style.background  = sel?'rgba(0,200,255,.12)':'var(--surface)';
+  });
+}
+function saveEditorDevice(name, ip) {
+  const types  = loadDeviceTypes();
+  const aliases= loadDeviceAliases();
+  const newType = document.getElementById(`editor-type-${ip}`).value;
+  const newAlias= (document.getElementById(`editor-alias-${ip}`).value||'').trim();
+  types[name] = newType;
+  if (newAlias && newAlias!==name) aliases[ip]=newAlias; else delete aliases[ip];
+  saveDeviceTypes(types); saveDeviceAliases(aliases);
+  if (currentDevices.length) { renderMonitor(currentDevices); if(activeTab==='topology') renderTopology(currentDevices); }
+}
+
+// ── NOTIFICATIONS ────────────────────────────────────────────
+function addNotification(type, msg) {
+  notifications.unshift({ type, msg, ts: new Date().toLocaleTimeString() });
+  if (notifications.length > 50) notifications.pop();
+  saveNotifications(notifications);
+  updateNotifBadge();
+  renderNotifList();
+}
+function updateNotifBadge() {
+  const badge = document.getElementById('notifBadge');
+  const dn = notifications.filter(n=>n.type==='down').length;
+  if (dn > 0) {
+    badge.style.display='flex'; badge.textContent=dn>9?'9+':dn;
+  } else {
+    badge.style.display='none';
+  }
+}
+function renderNotifList() {
+  const el = document.getElementById('notifList');
+  if (!el) return;
+  if (!notifications.length) { el.innerHTML='<div class="notif-empty">No notifications yet</div>'; return; }
+  el.innerHTML = notifications.slice(0,30).map(n=>
+    `<div class="notif-item">
+      <div class="notif-dot ${n.type}"></div>
+      <div><div class="notif-msg">${n.msg}</div><div class="notif-time">${n.ts}</div></div>
+    </div>`
+  ).join('');
+}
+function clearNotifications() { notifications=[]; saveNotifications([]); updateNotifBadge(); renderNotifList(); }
+function toggleNotifPanel() { document.getElementById('notifPanel').classList.toggle('open'); renderNotifList(); }
+function closeNotifPanel()  { document.getElementById('notifPanel').classList.remove('open'); }
+
+// ── EXPORT ───────────────────────────────────────────────────
+function exportCSV() {
+  const rows = [['Timestamp','Device','IP','Event','Duration']];
+  currentEvents.forEach(e=>rows.push([e.ts,e.name,e.ip,e.type,e.duration||'']));
+  const csv = rows.map(r=>r.map(v=>`"${v}"`).join(',')).join('\n');
+  downloadFile('netmon_events.csv','text/csv',csv);
+}
+function exportJSON() {
+  const data = { exported: new Date().toISOString(), devices: currentDevices, events: currentEvents };
+  downloadFile('netmon_export.json','application/json', JSON.stringify(data, null, 2));
+}
+function exportPDF() { window.print(); }
+function downloadFile(name, mime, content) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content],{type:mime}));
+  a.download = name; a.click();
+}
+
+// ── STATS UTILS ──────────────────────────────────────────────
+function calcDeviceStats(events) {
+  const downs = events.filter(e=>e.type==='DOWN');
+  const ups   = events.filter(e=>e.type==='UP');
+  const total = ups.reduce((acc,e)=>acc+parseDuration(e.duration||''),0);
+  const h=Math.floor(total/3600), m=Math.floor((total%3600)/60), s=total%60;
+  return { downCount:downs.length, upCount:ups.length, totalDowntime:total, formattedDowntime:`${h}h ${m}m ${s}s`, lastEvent:events.at(-1)||null };
+}
+function parseDuration(str) {
+  if (!str) return 0;
+  let s=0;
+  const hm=str.match(/(\d+)h/); if(hm) s+=parseInt(hm[1])*3600;
+  const mm=str.match(/(\d+)m/); if(mm) s+=parseInt(mm[1])*60;
+  const sm=str.match(/(\d+)s/); if(sm) s+=parseInt(sm[1]);
+  return s;
+}
+function formatSeconds(s) {
+  const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;
+  return h>0?`${h}h ${m}m ${sec}s`:`${m}m ${sec}s`;
+}
+
+// ── FETCH DATA ────────────────────────────────────────────────
 async function fetchMessage(msgId) {
-  const fwd = await fetch(`https://api.telegram.org/bot${TOKEN}/forwardMessage`, {
+  const r = await fetch(`https://api.telegram.org/bot${TOKEN}/forwardMessage`, {
     method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({chat_id:CHAT_ID, from_chat_id:CHAT_ID, message_id:msgId})
   });
-  const fd = await fwd.json();
+  const fd = await r.json();
   if (fd.ok && fd.result?.text) {
     fetch(`https://api.telegram.org/bot${TOKEN}/deleteMessage`, {
       method:'POST', headers:{'Content-Type':'application/json'},
@@ -421,473 +1796,84 @@ async function fetchMessage(msgId) {
   return null;
 }
 
+const prevStatuses = {};
+
 async function doLoad() {
   document.getElementById('ico').classList.add('spinning');
   document.getElementById('btnR').disabled = true;
   document.getElementById('err').style.display = 'none';
-
   try {
-    // fetch status
     const sText = await fetchMessage(STATUS_MID);
     if (sText) {
       const p = JSON.parse(sText);
       if (p.NETMON_STATUS && p.devices) {
+        // detect status changes for notifications
+        p.devices.forEach(d=>{
+          const prev = prevStatuses[d.ip];
+          if (prev !== undefined && prev !== d.status) {
+            if (d.status==='down') addNotification('down',`🔴 ${d.name} went OFFLINE`);
+            else if (d.status==='up') addNotification('up',`🟢 ${d.name} is back ONLINE`);
+          }
+          prevStatuses[d.ip]=d.status;
+        });
         currentDevices = p.devices;
+        document.getElementById('lastUpd').textContent = 'Updated: ' + (p.last_update||'—');
         renderMonitor(currentDevices);
         if (activeTab==='topology') renderTopology(currentDevices);
+        if (activeTab==='dashboard') renderDashboard();
       }
     }
-
-    // fetch log if we have log message id
     if (LOG_MID) {
       const lText = await fetchMessage(LOG_MID);
       if (lText) {
         const lp = JSON.parse(lText);
         if (lp.NETMON_LOG) {
           currentEvents = lp.events || [];
+          if (activeTab==='history') renderEventLog();
         }
       }
     } else {
-      // try to get log_mid from getUpdates
-      const res = await fetch(`https://api.telegram.org/bot${TOKEN}/getUpdates?limit=100&offset=-100`);
+      // fallback: getUpdates
+      const res  = await fetch(`https://api.telegram.org/bot${TOKEN}/getUpdates?limit=100&offset=-100`);
       const data = await res.json();
       if (data.ok) {
         for (let i=data.result.length-1;i>=0;i--) {
           const txt = data.result[i].message?.text||'';
           if (txt.includes('"NETMON_LOG"')) {
-            try {
-              const lp = JSON.parse(txt);
-              if (lp.NETMON_LOG) {
-                currentEvents = lp.events||[];
-                break;
-              }
-            } catch {}
+            try { const lp=JSON.parse(txt); if(lp.NETMON_LOG){currentEvents=lp.events||[];break;} } catch {}
           }
         }
       }
     }
-
     startCD();
   } catch(e) {
-    showErr('⚠️ Connection failed: '+e.message);
+    showErr('⚠️ Connection failed: ' + e.message);
   }
-
   document.getElementById('ico').classList.remove('spinning');
   document.getElementById('btnR').disabled = false;
 }
 
-function showErr(msg){
+function showErr(msg) {
   const el=document.getElementById('err');
   el.textContent=msg; el.style.display='block';
 }
 
-function calculateDeviceStats(events){
-  const downs = events.filter(e => e.type === 'DOWN');
-  const ups = events.filter(e => e.type === 'UP');
-  let totalDowntime = 0;
-  
-  // Parse durations
-  downs.forEach(d => {
-    if (d.duration) {
-      const match = d.duration.match(/(\d+)h\s+(\d+)m\s+(\d+)s/) || 
-                    d.duration.match(/(\d+)m\s+(\d+)s/) ||
-                    d.duration.match(/(\d+)s/);
-      if (match) {
-        let secs = 0;
-        if (match[3] !== undefined) {
-          // Format: Xh Ym Zs or Ym Zs
-          if (match[1] && match[2] && match[3]) secs = parseInt(match[1])*3600 + parseInt(match[2])*60 + parseInt(match[3]);
-          else if (match[1] && match[2]) secs = parseInt(match[1])*60 + parseInt(match[2]);
-          else secs = parseInt(match[1]);
-        }
-        totalDowntime += secs;
-      }
-    }
-  });
-  
-  const hours = Math.floor(totalDowntime / 3600);
-  const mins = Math.floor((totalDowntime % 3600) / 60);
-  const secs = totalDowntime % 60;
-  
-  return {
-    downCount: downs.length,
-    upCount: ups.length,
-    totalDowntime: totalDowntime,
-    formattedDowntime: `${hours}h ${mins}m ${secs}s`,
-    lastEvent: events.length > 0 ? events[events.length - 1] : null,
-    firstEvent: events.length > 0 ? events[0] : null
-  };
-}
-
-function openDeviceModal(name, ip){
-  const events = currentEvents.filter(e => e.name===name || e.ip===ip);
-  const types = loadDeviceTypes();
-  const aliases = loadDeviceAliases();
-  const selected = types[name] || inferDeviceType(name);
-  const alias = aliases[ip] || name;
-  const rows = events.length ? events.map(ev => `<div style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,.08)"><div style="font-weight:700">${ev.type} — ${ev.ts}</div><div style="font-size:12px;color:var(--muted)">${ev.ip}</div>${ev.duration?`<div style="font-size:12px;color:var(--up);margin-top:4px">Duration: ${ev.duration}</div>`:''}</div>`).join('') : '<div style="padding:20px;color:var(--muted)">No history available for this device</div>';
-  const h = `<div style="padding:18px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div><div style="font-size:16px;font-weight:800">${alias}</div><div style="font-size:12px;color:var(--muted);margin-top:4px">${ip}</div></div><div style="font-size:26px">${iconForType(selected)}</div></div><div style="margin-bottom:14px"><label style="display:block;margin-bottom:6px;font-size:12px;color:var(--muted)">Label</label><input id="deviceAliasInput" type="text" value="${alias}" style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:var(--surface);color:var(--text);font-family:var(--sans);font-size:14px;margin-bottom:12px" /></div>
-<div style="margin-bottom:14px"><label style="display:block;margin-bottom:6px;font-size:12px;color:var(--muted)">Device type</label>${deviceTypePreview(selected, 'deviceTypeSelect')}</div><div style="font-weight:700;margin-bottom:10px">Down/Up history</div>${rows}<div style="display:flex;justify-content:flex-end;gap:8px;margin-top:18px"><button class="btn" onclick="saveDeviceSettings(${JSON.stringify(name)}, ${JSON.stringify(ip)})">Save</button><button class="btn" onclick="closeHistory()">Close</button></div></div>`;
-  document.getElementById('historyModalContent').innerHTML = h;
-  document.getElementById('historyModal').style.display='flex';
-}
-
-function openTopologyIconEditor(){
-  const types = loadDeviceTypes();
-  const aliases = loadDeviceAliases();
-  let rows = '';
-  for (const [zone, list] of Object.entries(ZONES)) {
-    rows += `<div style="margin-top:16px"><div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px">${zone}</div>`;
-    list.forEach(d => {
-      const selected = types[d.name] || inferDeviceType(d.name);
-      const alias = aliases[d.ip] || d.name;
-      const typeOpts = [{id:'computer',label:'💻',icon:'💻'},{id:'printer',label:'🖨️',icon:'🖨️'},{id:'firewall',label:'🔥',icon:'🔥'},{id:'switch',label:'🔀',icon:'🔀'},{id:'tablet',label:'📱',icon:'📱'}];
-      const safeIp = d.ip.replace(/'/g, "\\'");
-      const safeName = d.name.replace(/'/g, "\\'");
-      rows += `<div style="padding:12px 0;border-bottom:1px solid rgba(255,255,255,.08)" data-device-ip="${d.ip}"><div style="display:flex;gap:8px;margin-bottom:8px;align-items:center"><div style="min-width:140px"><div style="font-size:13px;font-weight:600">${alias}</div><div style="font-size:11px;color:var(--muted)">${d.ip}</div></div><input id="deviceAliasInput-${d.ip}" type="text" value="${alias}" style="flex:1;padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:var(--surface);color:var(--text);font-family:var(--sans);font-size:12px" /></div><div style="display:grid;grid-template-columns:repeat(5,40px);gap:6px;margin-bottom:8px">${typeOpts.map(t => `<button type="button" data-device-type-btn="${d.ip}" data-type="${t.id}" onclick="setDeviceTypeInEditor('${safeIp}', '${t.id}')" style="padding:8px;border-radius:8px;border:2px solid ${t.id===selected?'var(--accent)':'rgba(255,255,255,.12)'};background:${t.id===selected?'rgba(77,159,255,.15)':'var(--surface)'};color:var(--text);cursor:pointer;font-size:16px;transition:all .2s" title="${t.label}">${t.icon}</button>`).join('')}</div><input type="hidden" id="deviceTypeSelect-${d.ip}" value="${selected}" /><button class="btn" style="white-space:nowrap;font-size:11px;padding:6px 10px" onclick="saveDeviceSettings('${safeName}', '${safeIp}')">Save</button></div>`;
-    });
-    rows += '</div>';
-  }
-  const h = `<div style="padding:18px;max-height:70vh;overflow:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px"><div><div style="font-size:16px;font-weight:800">Icon Editor</div><div style="font-size:12px;color:var(--muted);margin-top:4px">แก้ไข label และประเภทไอคอนได้ทั้งหน้า Topology</div></div></div>${rows}<div style="display:flex;justify-content:flex-end;margin-top:16px"><button class="btn" onclick="closeHistory()">Close</button></div></div>`;
-  document.getElementById('historyModalContent').innerHTML = h;
-  document.getElementById('historyModal').style.display='flex';
-}
-
-function closeHistory(){
-  document.getElementById('historyModal').style.display='none';
-}
-
-function deviceTypeOptions(selected){
-  const types = [{id:'computer',label:'Computer'},{id:'printer',label:'Printer'},{id:'firewall',label:'Firewall'},{id:'switch',label:'Switch'},{id:'tablet',label:'Tablet / POS'}];
-  return types.map(t => `<option value="${t.id}"${t.id===selected?' selected':''}>${t.label}</option>`).join('');
-}
-
-function deviceTypePreview(selected, inputId){
-  const types = [{id:'computer',label:'Computer',icon:'💻'},{id:'printer',label:'Printer',icon:'🖨️'},{id:'firewall',label:'Firewall',icon:'🔥'},{id:'switch',label:'Switch',icon:'🔀'},{id:'tablet',label:'Tablet / POS',icon:'📱'}];
-  return `<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:14px">${types.map(t => `<button type="button" class="type-btn" data-type="${t.id}" onclick="setDeviceType(${JSON.stringify(inputId)}, ${JSON.stringify(t.id)})" style="padding:12px;border-radius:10px;border:2px solid ${t.id===selected?'var(--accent)':'rgba(255,255,255,.12)'};background:${t.id===selected?'rgba(77,159,255,.15)':'var(--surface)'};color:var(--text);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:6px;transition:all .2s"><div style="font-size:24px">${t.icon}</div><div style="font-size:11px;font-weight:600;text-align:center">${t.label}</div></button>`).join('')}</div><input type="hidden" id="${inputId}" value="${selected}" />`;
-}
-
-function setDeviceType(inputId, typeId){
-  document.getElementById(inputId).value = typeId;
-  document.querySelectorAll('.type-btn').forEach(btn => {
-    const isSelected = btn.dataset.type === typeId;
-    btn.style.borderColor = isSelected ? 'var(--accent)' : 'rgba(255,255,255,.12)';
-    btn.style.background = isSelected ? 'rgba(77,159,255,.15)' : 'var(--surface)';
-  });
-}
-
-function setDeviceTypeInEditor(ip, typeId){
-  const input = document.getElementById(`deviceTypeSelect-${ip}`);
-  if (!input) {
-    console.error('Type input not found for IP:', ip);
-    return;
-  }
-  input.value = typeId;
-  document.querySelectorAll(`[data-device-type-btn="${ip}"]`).forEach(btn => {
-    const isSelected = btn.dataset.type === typeId;
-    btn.style.borderColor = isSelected ? 'var(--accent)' : 'rgba(255,255,255,.12)';
-    btn.style.background = isSelected ? 'rgba(77,159,255,.15)' : 'var(--surface)';
-  });
-}
-
-function saveDeviceSettings(name, ip){
-  const typeInputId = `deviceTypeSelect-${ip}`;
-  const aliasInputId = `deviceAliasInput-${ip}`;
-  
-  let typeInput = document.getElementById(typeInputId);
-  let aliasInput = document.getElementById(aliasInputId);
-  
-  // Fallback for single device modal
-  if (!typeInput) typeInput = document.getElementById('deviceTypeSelect');
-  if (!aliasInput) aliasInput = document.getElementById('deviceAliasInput');
-  
-  if (!typeInput || !aliasInput) {
-    console.error('Could not find inputs:', typeInputId, aliasInputId);
-    return;
-  }
-  
-  const types = loadDeviceTypes();
-  const aliases = loadDeviceAliases();
-  
-  const newType = typeInput.value;
-  const newAlias = aliasInput.value.trim();
-  
-  // Save device type using device name as key
-  types[name] = newType;
-  
-  // Save device alias using IP as key
-  if (newAlias && newAlias !== name) {
-    aliases[ip] = newAlias;
-  } else {
-    delete aliases[ip];
-  }
-  
-  saveDeviceTypes(types);
-  saveDeviceAliases(aliases);
-  
-  console.log('Saved device:', name, 'Type:', newType, 'Alias:', newAlias);
-  
-  if (currentDevices.length) {
-    renderMonitor(currentDevices);
-    if (activeTab==='topology') renderTopology(currentDevices);
-  }
-  closeHistory();
-}
-
-function loadDeviceTypes(){
-  try { return JSON.parse(localStorage.getItem('netmon_device_types')||'{}'); } catch { return {}; }
-}
-
-function saveDeviceTypes(types){
-  localStorage.setItem('netmon_device_types', JSON.stringify(types));
-}
-
-function loadDeviceAliases(){
-  try { return JSON.parse(localStorage.getItem('netmon_device_aliases')||'{}'); } catch { return {}; }
-}
-
-function saveDeviceAliases(aliases){
-  localStorage.setItem('netmon_device_aliases', JSON.stringify(aliases));
-}
-
-function loadTopologyPositions(){
-  try { return JSON.parse(localStorage.getItem('netmon_topo_positions')||'{}'); } catch { return {}; }
-}
-
-function saveTopologyPositions(positions){
-  localStorage.setItem('netmon_topo_positions', JSON.stringify(positions));
-}
-
-function loadTopologyCanvas(){
-  try { return JSON.parse(localStorage.getItem('netmon_topo_canvas')||'{}'); } catch { return {}; }
-}
-
-function saveTopologyCanvas(canvas){
-  localStorage.setItem('netmon_topo_canvas', JSON.stringify(canvas));
-}
-
-function computeAutoTopologyCanvasSize(flat, positions){
-  const nodeWidth = 84;
-  const nodeHeight = 90;
-  const margin = 24;
-  let maxX = 0, maxY = 0;
-  flat.forEach((d, idx) => {
-    const pos = positions[d.ip] || defaultTopologyPosition(idx);
-    maxX = Math.max(maxX, pos.x + nodeWidth);
-    maxY = Math.max(maxY, pos.y + nodeHeight);
-  });
-  return {
-    w: Math.max(640, Math.min(1600, Math.round(maxX + margin))),
-    h: Math.max(440, Math.min(1200, Math.round(maxY + margin)))
-  };
-}
-
-function autoFitTopologyCanvas(){
-  const positions = loadTopologyPositions();
-  const flat = Object.values(ZONES).flat();
-  const canvas = computeAutoTopologyCanvasSize(flat, positions);
-  saveTopologyCanvas(canvas);
-  const c = document.getElementById('topoCanvas');
-  if (c) { c.style.width = canvas.w + 'px'; c.style.height = canvas.h + 'px'; }
-  updateCanvasLabel();
-}
-
-function setTopologyCanvasSize(w,h){
-  const canvas = { w: Math.max(320, Math.round(w)), h: Math.max(200, Math.round(h)) };
-  saveTopologyCanvas(canvas);
-  const c = document.getElementById('topoCanvas');
-  if (c) { c.style.width = canvas.w + 'px'; c.style.height = canvas.h + 'px'; }
-  updateCanvasLabel();
-}
-
-function updateCanvasLabel(){
-  const lbl = document.getElementById('canvasSizeLabel');
-  if (!lbl) return;
-  const c = loadTopologyCanvas();
-  if (c.w && c.h) lbl.textContent = c.w + '×' + c.h;
-  else lbl.textContent = '';
-}
-
-function loadTopologyLock(){
-  return localStorage.getItem('netmon_topo_locked') === '1';
-}
-
-function saveTopologyLock(locked){
-  localStorage.setItem('netmon_topo_locked', locked ? '1' : '0');
-}
-
-function toggleTopologyLock(){
-  topologyLocked = !topologyLocked;
-  saveTopologyLock(topologyLocked);
-  updateTopologyLockButton();
-}
-
-function updateTopologyLockButton(){
-  const btn = document.getElementById('topoLockBtn');
-  if (!btn) return;
-  btn.textContent = topologyLocked ? 'Unlock positions' : 'Lock positions';
-  document.getElementById('topoGrid').classList.toggle('locked', topologyLocked);
-}
-
-function defaultTopologyPosition(idx){
-  const col = idx % 6;
-  const row = Math.floor(idx / 6);
-  return { x: 12 + col * 104, y: 12 + row * 120 };
-}
-
-function initTopologyDrag(){
-  const nodes = document.querySelectorAll('.topo-node');
-  nodes.forEach(node => {
-    node.addEventListener('mousedown', startTopoDrag);
-    node.addEventListener('touchstart', startTopoDrag, {passive:false});
-  });
-}
-
-function startTopoDrag(event){
-  if (topologyLocked) return;
-  event.preventDefault();
-  const node = event.currentTarget;
-  const ip = node.dataset.ip;
-  const parent = node.parentElement;
-  const startX = event.touches ? event.touches[0].clientX : event.clientX;
-  const startY = event.touches ? event.touches[0].clientY : event.clientY;
-  const rect = node.getBoundingClientRect();
-  const parentRect = parent.getBoundingClientRect();
-  const offsetX = startX - rect.left;
-  const offsetY = startY - rect.top;
-  node.classList.add('dragging');
-
-  function onMove(e){
-    const mx = e.touches ? e.touches[0].clientX : e.clientX;
-    const my = e.touches ? e.touches[0].clientY : e.clientY;
-    let x = mx - parentRect.left - offsetX;
-    let y = my - parentRect.top - offsetY;
-    const maxX = parentRect.width - rect.width - 10;
-    const maxY = parentRect.height - rect.height - 10;
-    x = Math.max(10, Math.min(maxX, x));
-    y = Math.max(10, Math.min(maxY, y));
-    node.style.left = `${x}px`;
-    node.style.top = `${y}px`;
-  }
-
-  function onUp(){
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-    document.removeEventListener('touchmove', onMove);
-    document.removeEventListener('touchend', onUp);
-    node.classList.remove('dragging');
-    const positions = loadTopologyPositions();
-    positions[ip] = { x: parseInt(node.style.left,10), y: parseInt(node.style.top,10) };
-    saveTopologyPositions(positions);
-  }
-
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
-  document.addEventListener('touchmove', onMove, {passive:false});
-  document.addEventListener('touchend', onUp);
-}
-
-function skeleton(){
+// ── SKELETON ─────────────────────────────────────────────────
+function skeleton() {
   let h='';
-  for(const[z,ns] of Object.entries(ZONES)){
+  for(const [z,ns] of Object.entries(ZONES)){
     h+=`<div class="zone-hdr"><span class="zone-name">${z}</span><span class="zone-line"></span><span class="zone-count">${ns.length}</span></div><div class="grid">`;
-    ns.forEach(()=>h+=`<div class="dcard skel" style="height:72px"><div class="skel-bar" style="width:60%;height:13px;margin-bottom:8px"></div><div class="skel-bar" style="width:45%;height:11px"></div></div>`);
+    ns.forEach(()=>h+=`<div class="dcard skel" style="height:72px"><div class="skel-bar" style="width:60%;height:12px;margin-bottom:8px"></div><div class="skel-bar" style="width:45%;height:10px"></div></div>`);
     h+='</div>';
   }
   return h;
 }
 
-function initHistoryTab(){
-  const select = document.getElementById('historyDeviceSelect');
-  select.innerHTML = '<option value="">-- Choose a device --</option>';
-  const allDevices = Object.values(ZONES).flat();
-  const aliases = loadDeviceAliases();
-  allDevices.forEach(d => {
-    const alias = aliases[d.ip] || d.name;
-    select.innerHTML += `<option value='${d.ip}'>${alias}</option>`;
-  });
-  document.getElementById('historyContent').innerHTML = '';
-}
-
-function showDeviceHistoryDetail(){
-  const ip = document.getElementById('historyDeviceSelect').value;
-  if (!ip) {
-    document.getElementById('historyContent').innerHTML = '';
-    return;
-  }
-  
-  const allDevices = Object.values(ZONES).flat();
-  const device = allDevices.find(d => d.ip === ip);
-  if (!device) return;
-  
-  const events = currentEvents.filter(e => e.name===device.name || e.ip===ip).sort((a,b) => new Date(b.ts) - new Date(a.ts));
-  const stats = calculateDeviceStats(events);
-  const types = loadDeviceTypes();
-  const aliases = loadDeviceAliases();
-  const selected = types[device.name] || inferDeviceType(device.name);
-  const alias = aliases[ip] || device.name;
-  
-  let eventRows = '';
-  if (events.length > 0) {
-    events.forEach(ev => {
-      const bgColor = ev.type === 'DOWN' ? 'rgba(255,77,109,.08)' : 'rgba(0,229,160,.08)';
-      const color = ev.type === 'DOWN' ? 'var(--down)' : 'var(--up)';
-      eventRows += `<div style="padding:12px;border-radius:8px;background:${bgColor};border-left:3px solid ${color};margin-bottom:8px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-weight:700;color:${color}">${ev.type}</div>
-          <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${ev.ts}</div>
-        </div>
-        <div style="font-size:12px;color:var(--muted)">${ev.ip}</div>
-        ${ev.duration?`<div style="font-size:12px;color:${color};margin-top:4px;font-weight:600">Duration: ${ev.duration}</div>`:''}</div>`;
-    });
-  } else {
-    eventRows = '<div style="padding:20px;color:var(--muted);text-align:center">No history available for this device</div>';
-  }
-  
-  const statsHtml = `<div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:16px">
-    <div style="background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.2);border-radius:8px;padding:12px">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Times Down</div>
-      <div style="font-size:24px;font-weight:800;color:var(--down)">${stats.downCount}</div>
-    </div>
-    <div style="background:rgba(0,229,160,.08);border:1px solid rgba(0,229,160,.2);border-radius:8px;padding:12px">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Times Up</div>
-      <div style="font-size:24px;font-weight:800;color:var(--up)">${stats.upCount}</div>
-    </div>
-    <div style="background:rgba(255,77,109,.08);border:1px solid rgba(255,77,109,.2);border-radius:8px;padding:12px;grid-column:1/-1">
-      <div style="font-size:11px;color:var(--muted);margin-bottom:4px">Total Downtime</div>
-      <div style="font-size:18px;font-weight:800;color:var(--down);font-family:var(--mono)">${stats.formattedDowntime}</div>
-    </div>
-  </div>`;
-  
-  const h = `<div style="max-width:900px">
-    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)">
-      <div style="font-size:32px">${iconForType(selected)}</div>
-      <div>
-        <div style="font-size:18px;font-weight:800">${alias}</div>
-        <div style="font-size:12px;color:var(--muted);font-family:var(--mono)">${ip}</div>
-      </div>
-    </div>
-    ${statsHtml}
-    <div style="font-weight:700;margin-bottom:12px;font-size:14px">Event History</div>
-    <div style="max-height:600px;overflow-y:auto">${eventRows}</div>
-  </div>`;
-  
-  document.getElementById('historyContent').innerHTML = h;
-}
-
+// ── INIT ─────────────────────────────────────────────────────
+notifications = loadNotifications();
+updateNotifBadge();
 document.getElementById('main').innerHTML = skeleton();
 doLoad();
 </script>
-
-<!-- history modal -->
-<div id="historyModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:200">
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:10px;max-width:720px;width:92%;color:var(--text);box-shadow:0 8px 30px rgba(0,0,0,0.6)">
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.03)">
-      <div style="font-weight:800">Device History</div>
-      <button class="btn" onclick="closeHistory()">Close</button>
-    </div>
-    <div id="historyModalContent" style="max-height:60vh;overflow:auto;padding:10px 14px"></div>
-  </div>
-</div>
 </body>
-</html>
+</html>   
