@@ -380,11 +380,12 @@ body::after {
 .topo-svg { position: absolute; top: 0; left: 0; pointer-events: none; z-index: 0; overflow: visible; }
 .topo-node {
   position: absolute; display: flex; flex-direction: column; align-items: center;
-  width: clamp(76px,8vw,100px); min-height: clamp(78px,9vh,100px);
-  background: var(--card); border: 1.5px solid var(--border2);
-  border-radius: var(--r); padding: clamp(6px,.8vh,9px) 5px clamp(5px,.6vh,7px);
+  width: clamp(88px,9vw,112px); min-height: clamp(88px,10vh,110px);
+  background: rgba(12,20,32,.97); border: 1.5px solid var(--border2);
+  border-radius: var(--r); padding: clamp(7px,.9vh,10px) 6px clamp(6px,.7vh,8px);
   cursor: grab; transition: border-color .3s, box-shadow .3s; touch-action: none; z-index: 1;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 8px rgba(0,0,0,.45);
 }
 .topo-node:hover { z-index: 5; }
 .topo-node.dragging { cursor: grabbing; opacity: .9; z-index: 10; }
@@ -394,12 +395,89 @@ body::after {
 .minimap { position: absolute; bottom: 12px; right: 12px; width: clamp(90px,11vw,145px); height: clamp(58px,7.5vw,94px); background: rgba(2,4,8,.9); border: 1px solid var(--border2); border-radius: 8px; overflow: hidden; z-index: 20; pointer-events: none; }
 .minimap-canvas { position: relative; width: 100%; height: 100%; }
 .minimap-node { position: absolute; border-radius: 1.5px; transition: all .3s; }
-.topo-icon   { font-size: clamp(15px,1.5vw,21px); margin-bottom: 3px; }
-.topo-name   { font-size: clamp(8px,.6vw,11px); font-weight: 600; text-align: center; line-height: 1.2; word-break: break-word; color: var(--text); }
-.topo-ip     { font-size: clamp(7px,.55vw,10px); color: var(--muted); font-family: var(--mono); margin-top: 2px; }
-.topo-status { font-size: clamp(7px,.55vw,9px); font-weight: 700; font-family: var(--mono); margin-top: 3px; padding: 1px 5px; border-radius: 3px; letter-spacing: .05em; }
-.topo-node.up .topo-status   { background: var(--up-s); color: var(--up); }
-.topo-node.down .topo-status { background: var(--down-s); color: var(--down); }
+.topo-icon   { font-size: clamp(16px,1.6vw,22px); margin-bottom: 4px; }
+.topo-name   { font-size: clamp(11px,.75vw,13px); font-weight: 700; text-align: center; line-height: 1.25; word-break: break-word; color: #e8f2ff; letter-spacing: .01em; text-shadow: 0 1px 4px rgba(0,0,0,.7); }
+.topo-ip     { font-size: clamp(9px,.65vw,11px); color: #7eb8d8; font-family: var(--mono); margin-top: 2px; font-weight: 500; }
+.topo-status { font-size: clamp(8px,.6vw,10px); font-weight: 800; font-family: var(--mono); margin-top: 4px; padding: 2px 7px; border-radius: 4px; letter-spacing: .06em; }
+.topo-node.up .topo-status   { background: rgba(0,229,160,.18); color: #00e5a0; border: 1px solid rgba(0,229,160,.35); }
+.topo-node.down .topo-status { background: rgba(255,64,96,.18);  color: #ff4060; border: 1px solid rgba(255,64,96,.4); }
+
+/* ═══════════════ LAYOUT MANAGER ═══════════════ */
+/* ── Toast Notification ── */
+.lm-toast {
+  position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+  background: rgba(8,13,20,.97); border: 1px solid var(--border3);
+  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+  border-radius: 12px; padding: 12px 22px;
+  font-size: clamp(12px,.85vw,14px); font-weight: 700; color: var(--text);
+  display: flex; align-items: center; gap: 10px;
+  box-shadow: 0 8px 32px rgba(0,0,0,.6), 0 0 0 1px rgba(0,200,255,.08);
+  z-index: 9999; opacity: 0; pointer-events: none;
+  transition: opacity .28s ease, transform .28s cubic-bezier(.34,1.26,.64,1);
+  white-space: nowrap;
+}
+.lm-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.lm-toast.success { border-color: rgba(0,229,160,.4); }
+.lm-toast.error   { border-color: rgba(255,64,96,.4); }
+.lm-toast.info    { border-color: rgba(0,200,255,.4); }
+.lm-toast-icon { font-size: 16px; }
+
+/* ── Drag Enhancement ── */
+.topo-node {
+  will-change: transform, left, top;
+  user-select: none; -webkit-user-select: none;
+}
+.topo-node.lm-dragging {
+  cursor: grabbing !important;
+  opacity: .92;
+  z-index: 999 !important;
+  transform: scale(1.08);
+  box-shadow: 0 12px 40px rgba(0,200,255,.22), 0 4px 16px rgba(0,0,0,.5);
+  border-color: var(--accent) !important;
+  transition: box-shadow .15s, border-color .15s;
+}
+.topo-node.lm-collision {
+  border-color: var(--down) !important;
+  box-shadow: 0 0 20px rgba(255,64,96,.35) !important;
+}
+.topo-node.lm-placed {
+  transition: left .18s cubic-bezier(.34,1.26,.64,1), top .18s cubic-bezier(.34,1.26,.64,1);
+}
+
+/* ── Layout Manager Toolbar ── */
+.lm-toolbar {
+  display: flex; flex-wrap: wrap; gap: clamp(4px,.5vw,7px);
+  padding: clamp(6px,.8vh,10px) clamp(10px,1.5vw,18px);
+  background: rgba(8,13,20,.7); border-bottom: 1px solid var(--border);
+  align-items: center; position: relative; z-index: 2;
+}
+.lm-sep { width: 1px; height: 22px; background: var(--border2); margin: 0 2px; flex-shrink: 0; }
+.lm-label {
+  font-size: clamp(9px,.62vw,10px); font-weight: 700; text-transform: uppercase;
+  letter-spacing: .1em; color: var(--muted); white-space: nowrap; flex-shrink: 0;
+}
+.btn.success { border-color: rgba(0,229,160,.4); color: var(--up); }
+.btn.success:hover { background: var(--up-s); border-color: rgba(0,229,160,.6); }
+.btn.warn { border-color: rgba(255,180,0,.3); color: var(--warn); }
+.btn.warn:hover { background: var(--warn-s); }
+
+/* ── Pan Cursor ── */
+.topo-viewport.panning { cursor: grabbing !important; }
+.topo-viewport { cursor: default; }
+
+/* ── Viewport pan-mode indicator ── */
+.lm-pan-hint {
+  position: absolute; bottom: 52px; left: 50%; transform: translateX(-50%);
+  background: rgba(0,200,255,.1); border: 1px solid rgba(0,200,255,.2);
+  border-radius: 6px; padding: 4px 10px;
+  font-size: 10px; color: var(--accent); font-family: var(--mono);
+  pointer-events: none; z-index: 21; opacity: 0;
+  transition: opacity .3s;
+}
+.topo-viewport.panning .lm-pan-hint { opacity: 1; }
+
+/* ── Import hidden input ── */
+#lmImportInput { display: none; }
 
 /* ═══════════════ HISTORY VIEW ═══════════════ */
 #view-history { display: none; position: relative; z-index: 1; padding: clamp(10px,1.5vh,16px) clamp(12px,2vw,22px); }
@@ -564,8 +642,10 @@ body::after {
   .topo-actions .zoom-controls { grid-column: 1 / -1; }
   .topo-actions .topo-sep { display: none; }
   /* topo nodes slightly smaller */
-  .topo-node { width: 70px; min-height: 72px; }
-  .topo-icon { font-size: 14px; }
+  .topo-node { width: 82px; min-height: 84px; }
+  .topo-icon { font-size: 15px; }
+  .topo-name { font-size: 10px; }
+  .topo-ip   { font-size: 9px; }
   .minimap { display: none; }
   /* history tabs scrollable, smaller */
   .htab { padding: 6px 10px 8px; font-size: 10px; }
@@ -623,8 +703,8 @@ body::after {
   .stat-n { font-size: 30px; }
   .topo-node { width: 120px; min-height: 120px; }
   .topo-icon { font-size: 28px; }
-  .topo-name { font-size: 13px; }
-  .topo-ip, .topo-status { font-size: 11px; }
+  .topo-name { font-size: 15px; }
+  .topo-ip, .topo-status { font-size: 12px; }
   .btn { min-height: 44px; }
 }
 
@@ -652,6 +732,117 @@ body::after {
 /* ─── High-DPI retina ─── */
 @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
   body::before { background-size: 40px 40px; }
+}
+
+/* ═══════════════ DEVICE DETAIL MODAL (Topology Double-Click) ═══════════════ */
+.dd-overlay {
+  position: fixed; inset: 0; z-index: 400;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.78);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  padding: clamp(8px,2vw,20px);
+}
+.dd-overlay.open { display: flex; }
+.dd-box {
+  background: var(--card); border: 1px solid var(--border2);
+  border-radius: clamp(14px,1.6vw,20px); width: 100%; max-width: 580px;
+  max-height: clamp(82vh,94vh,96vh); display: flex; flex-direction: column;
+  box-shadow: 0 32px 80px rgba(0,0,0,.8), 0 0 0 1px rgba(0,200,255,.06);
+  animation: ddIn .3s cubic-bezier(.34,1.26,.64,1); overflow: hidden;
+}
+@keyframes ddIn { from{opacity:0;transform:translateY(16px) scale(.96)} to{opacity:1;transform:none} }
+.dd-hdr {
+  padding: clamp(14px,1.8vh,20px) clamp(16px,2vw,22px) clamp(12px,1.5vh,16px);
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.dd-hdr-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; margin-bottom:12px; }
+.dd-dev-meta { display:flex; align-items:center; gap:14px; flex:1; min-width:0; }
+.dd-icon-wrap {
+  width:clamp(44px,5vw,56px); height:clamp(44px,5vw,56px); flex-shrink:0;
+  border-radius:clamp(10px,1.2vw,14px); display:flex; align-items:center; justify-content:center;
+  font-size:clamp(22px,2.5vw,30px); position:relative;
+}
+.dd-icon-wrap.up    { background:rgba(0,229,160,.1);  border:1px solid rgba(0,229,160,.25); }
+.dd-icon-wrap.down  { background:rgba(255,64,96,.08); border:1px solid rgba(255,64,96,.25); }
+.dd-icon-wrap.unknown { background:var(--surface); border:1px solid var(--border2); }
+.dd-icon-pulse { position:absolute; inset:-4px; border-radius:inherit; border:2px solid transparent; pointer-events:none; }
+.dd-icon-wrap.up .dd-icon-pulse   { border-color:rgba(0,229,160,.3);  animation:ddPulse 2s infinite; }
+.dd-icon-wrap.down .dd-icon-pulse { border-color:rgba(255,64,96,.35); animation:ddPulse .8s infinite; }
+@keyframes ddPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.2;transform:scale(1.06)} }
+.dd-name-block { flex:1; min-width:0; }
+.dd-name { font-size:clamp(16px,1.6vw,21px); font-weight:800; line-height:1.2; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.dd-ip   { font-size:clamp(11px,.8vw,13px); color:var(--muted); font-family:var(--mono); margin-bottom:7px; }
+.dd-badges { display:flex; gap:6px; flex-wrap:wrap; }
+.dd-badge {
+  font-size:clamp(9px,.65vw,11px); font-weight:700; font-family:var(--mono);
+  padding:3px 9px; border-radius:5px; letter-spacing:.08em; white-space:nowrap;
+  display:inline-flex; align-items:center; gap:4px;
+}
+.dd-badge.online  { background:rgba(0,229,160,.12);  color:var(--up);   border:1px solid rgba(0,229,160,.25); }
+.dd-badge.offline { background:rgba(255,64,96,.1);   color:var(--down); border:1px solid rgba(255,64,96,.25); animation:ddBlink 1.2s infinite; }
+.dd-badge.warning { background:rgba(255,180,0,.1);   color:var(--warn); border:1px solid rgba(255,180,0,.25); }
+@keyframes ddBlink { 0%,100%{opacity:1} 50%{opacity:.45} }
+.dd-badge-dot { width:5px; height:5px; border-radius:50%; background:currentColor; }
+.dd-close {
+  background:var(--surface); border:1px solid var(--border2); color:var(--muted);
+  width:30px; height:30px; border-radius:8px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:14px; transition:all .15s; flex-shrink:0;
+  -webkit-tap-highlight-color:transparent;
+}
+.dd-close:hover { border-color:var(--border3); color:var(--text); background:var(--card2); }
+.dd-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; margin-top:0; }
+.dd-stat {
+  background:var(--surface); border:1px solid var(--border);
+  border-radius:9px; padding:9px 10px; text-align:center; transition:border-color .2s;
+}
+.dd-stat:hover { border-color:var(--border2); }
+.dd-stat-n { font-size:clamp(13px,1.3vw,18px); font-weight:700; font-family:var(--mono); line-height:1; margin-bottom:3px; }
+.dd-stat-l { font-size:clamp(8px,.58vw,10px); color:var(--muted); text-transform:uppercase; letter-spacing:.06em; font-weight:700; }
+.dd-body { flex:1; overflow-y:auto; padding:clamp(14px,1.8vh,18px) clamp(16px,2vw,22px); -webkit-overflow-scrolling:touch; }
+.dd-sec-hdr {
+  font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.12em;
+  color:var(--muted); margin-bottom:10px; display:flex; align-items:center; gap:7px;
+}
+.dd-sec-hdr::before { content:''; display:block; width:3px; height:12px; background:var(--accent); border-radius:2px; }
+.dd-timeline { position:relative; padding-left:20px; }
+.dd-timeline::before { content:''; position:absolute; left:6px; top:4px; bottom:4px; width:1.5px; background:linear-gradient(to bottom,var(--border2),transparent); }
+.dd-ev {
+  position:relative; margin-bottom:7px;
+  background:var(--card2); border:1px solid var(--border);
+  border-radius:9px; padding:9px 12px;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  transition:border-color .15s;
+  animation:ddEvIn .2s ease both;
+}
+@keyframes ddEvIn { from{opacity:0;transform:translateX(-5px)} to{opacity:1;transform:none} }
+.dd-ev::before {
+  content:''; position:absolute; left:-17px; top:50%; transform:translateY(-50%);
+  width:8px; height:8px; border-radius:50%; border:1.5px solid; background:var(--bg); z-index:1;
+}
+.dd-ev.d { border-color:rgba(255,64,96,.2); }
+.dd-ev.d::before { border-color:var(--down); background:rgba(255,64,96,.25); }
+.dd-ev.d:hover { border-color:rgba(255,64,96,.38); }
+.dd-ev.u { border-color:rgba(0,229,160,.15); }
+.dd-ev.u::before { border-color:var(--up); background:rgba(0,229,160,.2); }
+.dd-ev.u:hover { border-color:rgba(0,229,160,.3); }
+.dd-ev-badge { font-size:10px; font-weight:700; font-family:var(--mono); padding:2px 8px; border-radius:4px; letter-spacing:.06em; flex-shrink:0; white-space:nowrap; }
+.dd-ev.d .dd-ev-badge { background:var(--down-s); color:var(--down); border:1px solid rgba(255,64,96,.2); }
+.dd-ev.u .dd-ev-badge { background:var(--up-s);   color:var(--up);   border:1px solid rgba(0,229,160,.18); }
+.dd-ev-ts  { font-size:11px; color:var(--muted); font-family:var(--mono); flex:1; }
+.dd-ev-dur { font-size:11px; color:var(--up); font-family:var(--mono); flex-shrink:0; }
+.dd-empty  { text-align:center; padding:32px 16px; color:var(--muted); font-size:13px; }
+.dd-empty-ico { font-size:32px; margin-bottom:8px; opacity:.4; }
+.dd-foot {
+  padding:clamp(10px,1.2vh,14px) clamp(16px,2vw,22px); border-top:1px solid var(--border);
+  display:flex; align-items:center; justify-content:space-between; gap:10px; flex-shrink:0; flex-wrap:wrap;
+}
+.dd-foot-info { font-size:11px; color:var(--muted); font-family:var(--mono); }
+.dd-foot-btns { display:flex; gap:7px; }
+@media (max-width:480px) {
+  .dd-overlay { padding:0; align-items:flex-end; }
+  .dd-box { max-width:100%; border-radius:20px 20px 0 0; max-height:92vh; }
+  .dd-stats { grid-template-columns:repeat(2,1fr); }
 }
 
 /* ─── Print / PDF ─── */
@@ -724,10 +915,11 @@ body::after {
 
   <!-- Tabs -->
   <div class="tabs">
+
     <button class="tab active" onclick="switchTab('monitor',this)">⬡ Monitor</button>
     <button class="tab" onclick="switchTab('dashboard',this)">◈ Dashboard</button>
     <button class="tab" onclick="switchTab('topology',this)">◉ Topology</button>
-    <button class="tab" onclick="window.open('report.html','_blank')">📊 Report</button>
+
     
   </div>
 </div>
@@ -784,6 +976,7 @@ body::after {
 </div>
 
 <div id="view-topology" style="display:none;position:relative;z-index:1;padding:14px 20px">
+  <!-- Original topo actions -->
   <div class="topo-actions">
     <button class="btn sm" onclick="openTopologyIconEditor()">✏️ Edit</button>
     <button class="btn sm" id="topoLockBtn" onclick="toggleTopologyLock()">🔓 Lock</button>
@@ -798,8 +991,25 @@ body::after {
       <button class="zoom-btn" onclick="zoomReset()" title="Reset zoom" style="font-size:10px;width:28px">⊡</button>
     </div>
   </div>
+
+  <!-- Layout Manager Toolbar -->
+  <div class="lm-toolbar">
+    <span class="lm-label">Layout:</span>
+    <button class="btn sm success" onclick="lmSaveLayout()" title="Save current positions">💾 Save Layout</button>
+    <button class="btn sm" onclick="lmResetLayout()" title="Reset to last saved layout">↩ Reset Layout</button>
+    <button class="btn sm danger" onclick="lmFactoryReset()" title="Clear all positions — back to default">🗑 Factory Reset</button>
+    <div class="lm-sep"></div>
+    <span class="lm-label">File:</span>
+    <button class="btn sm" onclick="lmExportLayout()" title="Download positions as JSON">⬇ Export JSON</button>
+    <button class="btn sm" onclick="lmImportTrigger()" title="Upload layout JSON">⬆ Import JSON</button>
+    <input type="file" id="lmImportInput" accept=".json,application/json" onchange="lmImportLayout(event)">
+    <div class="lm-sep"></div>
+    <span id="lmAutoSaveBadge" style="font-size:10px;color:var(--up);font-family:var(--mono);font-weight:700;opacity:.7">● AUTO SAVE ON</span>
+  </div>
+
   <div class="topo-wrap">
     <div class="topo-viewport" id="topoViewport">
+      <div class="lm-pan-hint">Hold space + drag to pan</div>
       <div class="topo-canvas-outer" id="topoOuter">
         <div class="topo-grid" id="topoGrid">
           <div class="topo-canvas" id="topoCanvas"></div>
@@ -851,6 +1061,71 @@ body::after {
     <div class="modal-body" id="historyModalContent"></div>
     <div class="modal-foot" id="modalFoot"></div>
   </div>
+</div>
+
+<!-- ══ TOPOLOGY DEVICE DETAIL MODAL ══ -->
+<div class="dd-overlay" id="ddOverlay" onclick="if(event.target===this)closeDDModal()">
+  <div class="dd-box" id="ddBox">
+    <div class="dd-hdr">
+      <div class="dd-hdr-top">
+        <div class="dd-dev-meta">
+          <div class="dd-icon-wrap" id="ddIconWrap">
+            <span id="ddIcon">💻</span>
+            <div class="dd-icon-pulse"></div>
+          </div>
+          <div class="dd-name-block">
+            <div class="dd-name" id="ddName">—</div>
+            <div class="dd-ip" id="ddIp">—</div>
+            <div class="dd-badges" id="ddBadges"></div>
+          </div>
+        </div>
+        <button class="dd-close" onclick="closeDDModal()" aria-label="Close">✕</button>
+      </div>
+      <div class="dd-stats" id="ddStats">
+        <div class="dd-stat"><div class="dd-stat-n" id="dds-down" style="color:var(--down)">—</div><div class="dd-stat-l">Down Events</div></div>
+        <div class="dd-stat"><div class="dd-stat-n" id="dds-uptime" style="color:var(--up)">—</div><div class="dd-stat-l">Uptime %</div></div>
+        <div class="dd-stat"><div class="dd-stat-n" id="dds-downtime" style="color:var(--warn);font-size:13px">—</div><div class="dd-stat-l">Total Downtime</div></div>
+        <div class="dd-stat"><div class="dd-stat-n" id="dds-today" style="color:var(--accent)">—</div><div class="dd-stat-l">Incidents Today</div></div>
+      </div>
+    </div>
+    <div class="dd-body">
+      <!-- Info row -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px">
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Last Check</div>
+          <div style="font-size:12px;font-family:var(--mono);color:var(--text)" id="ddLastCheck">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Last Incident</div>
+          <div style="font-size:12px;font-family:var(--mono);color:var(--text)" id="ddLastIncident">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Current Downtime</div>
+          <div style="font-size:12px;font-family:var(--mono);color:var(--down)" id="ddCurDown">—</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 12px">
+          <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Zone</div>
+          <div style="font-size:12px;font-family:var(--mono);color:var(--accent)" id="ddZone">—</div>
+        </div>
+      </div>
+      <!-- History -->
+      <div class="dd-sec-hdr">Recent History</div>
+      <div class="dd-timeline" id="ddTimeline"></div>
+    </div>
+    <div class="dd-foot">
+      <div class="dd-foot-info" id="ddFootInfo"></div>
+      <div class="dd-foot-btns">
+        <button class="btn sm" onclick="ddOpenEdit()" id="ddEditBtn">✏️ Edit Device</button>
+        <button class="btn sm" onclick="closeDDModal()">✕ Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ LAYOUT MANAGER TOAST ══ -->
+<div class="lm-toast" id="lmToast">
+  <span class="lm-toast-icon" id="lmToastIcon">✅</span>
+  <span id="lmToastMsg">Layout Saved Successfully</span>
 </div>
 
 <script>
@@ -1267,14 +1542,13 @@ function renderTopology(devices) {
     const dur   = !isUp && map[d.ip]?.down_duration ? map[d.ip].down_duration : '';
     const pos   = positions[d.ip] || defaultTopoPos(idx);
     const safe  = JSON.stringify;
-    nodesHtml += `<div class="topo-node ${isUp?'up':'down'}" data-ip="${d.ip}" style="left:${pos.x}px;top:${pos.y}px"
-      ondblclick="openDeviceModal(${safe(d.name)},${safe(d.ip)})"
-      title="${dname}\n${d.ip}${dur?'\nDown: '+dur:''}\n(Double-click to edit)">
+    nodesHtml += `<div class="topo-node ${isUp?'up':'down'}" data-ip="${d.ip}" data-name="${encodeURIComponent(d.name)}" style="left:${pos.x}px;top:${pos.y}px"
+      title="${dname}\n${d.ip}${dur?'\nDown: '+dur:''}\n(Double-click for details)">
       <div class="topo-icon">${iconFor(d.name)}</div>
       <div class="topo-name">${dname}</div>
       <div class="topo-ip">.${d.ip.split('.').pop()}</div>
       <div class="topo-status">${isUp?'UP':'DOWN'}</div>
-      ${dur?`<div style="font-size:8px;color:var(--down);margin-top:2px;font-family:var(--mono)">${dur}</div>`:''}
+      ${dur?`<div style="font-size:10px;color:#ff6080;margin-top:3px;font-family:var(--mono);font-weight:700;letter-spacing:.03em">${dur}</div>`:''}
     </div>`;
   });
 
@@ -1306,6 +1580,7 @@ function renderTopology(devices) {
 
   document.getElementById('topoGrid').classList.toggle('locked', topoLocked);
   applyZoom();
+  _dragInitialized = false; // reset so new canvas gets fresh listeners
   initTopoDrag();
   renderMinimap(flat, positions, map);
   renderOfflineAlert(downs);
@@ -1398,54 +1673,437 @@ function updateTopoLockBtn() {
 }
 
 // ── DRAG ─────────────────────────────────────────────────────
-function initTopoDrag() {
-  document.querySelectorAll('.topo-node').forEach(node => {
-    node.addEventListener('mousedown', startTopoDrag);
-    node.addEventListener('touchstart', startTopoDrag, {passive:false});
-  });
-}
-function startTopoDrag(event) {
-  if (topoLocked) return;
-  event.preventDefault();
-  const node = event.currentTarget;
-  const ip   = node.dataset.ip;
-  const parent = node.parentElement;
-  const px = event.touches ? event.touches[0].clientX : event.clientX;
-  const py = event.touches ? event.touches[0].clientY : event.clientY;
-  const rect = node.getBoundingClientRect();
-  const pRect= parent.getBoundingClientRect();
-  const offX = (px - rect.left) / topoZoom;
-  const offY = (py - rect.top) / topoZoom;
-  node.classList.add('dragging');
+// ── TOPOLOGY DRAG + DBLCLICK (Event Delegation) ─────────────
+let _dragInitialized = false;
 
-  function onMove(e) {
-    const mx = e.touches ? e.touches[0].clientX : e.clientX;
-    const my = e.touches ? e.touches[0].clientY : e.clientY;
-    let x = (mx - pRect.left)/topoZoom - offX;
-    let y = (my - pRect.top) /topoZoom - offY;
-    x = Math.max(4, x); y = Math.max(4, y);
-    node.style.left = x+'px'; node.style.top = y+'px';
-  }
-  function onUp() {
-    document.removeEventListener('mousemove', onMove);
-    document.removeEventListener('mouseup', onUp);
-    document.removeEventListener('touchmove', onMove);
-    document.removeEventListener('touchend', onUp);
-    node.classList.remove('dragging');
-    const pos = loadTopoPositions();
-    pos[ip] = { x: parseInt(node.style.left,10), y: parseInt(node.style.top,10) };
-    saveTopoPositions(pos);
-    // Update SVG lines after drag
-    if (currentDevices.length) {
-      const map={}; currentDevices.forEach(d=>map[d.ip]=d);
-      renderMinimap(Object.values(ZONES).flat(), pos, map);
-    }
-  }
-  document.addEventListener('mousemove', onMove);
-  document.addEventListener('mouseup', onUp);
-  document.addEventListener('touchmove', onMove, {passive:false});
-  document.addEventListener('touchend', onUp);
+// ══════════════════════════════════════════════════════════════
+// LAYOUT MANAGER — Enterprise Drag & Drop System
+// ══════════════════════════════════════════════════════════════
+
+// ── LS keys ──────────────────────────────────────────────────
+const LM_KEY_CURRENT  = 'netmon_topo_positions';   // live positions (auto-save target)
+const LM_KEY_SNAPSHOT = 'netmon_topo_snapshot';    // last manual Save
+const LM_AUTOSAVE     = true;
+
+// ── Toast ─────────────────────────────────────────────────────
+let _toastTimer = null;
+function lmToast(msg, type = 'success', icon = '✅') {
+  const el = document.getElementById('lmToast');
+  const mi = document.getElementById('lmToastIcon');
+  const mm = document.getElementById('lmToastMsg');
+  if (!el) return;
+  clearTimeout(_toastTimer);
+  mi.textContent = icon;
+  mm.textContent = msg;
+  el.className   = `lm-toast ${type} show`;
+  _toastTimer = setTimeout(() => { el.classList.remove('show'); }, 2800);
 }
+
+// ── Save Layout (manual snapshot) ─────────────────────────────
+function lmSaveLayout() {
+  const pos = loadTopoPositions();
+  if (!Object.keys(pos).length) { lmToast('No positions to save', 'error', '⚠️'); return; }
+  saveLS(LM_KEY_SNAPSHOT, pos);
+  lmToast('Layout Saved Successfully', 'success', '💾');
+}
+
+// ── Reset to last saved snapshot ──────────────────────────────
+function lmResetLayout() {
+  const snap = loadLS(LM_KEY_SNAPSHOT, null);
+  if (!snap) { lmToast('No saved layout found — save one first', 'error', '⚠️'); return; }
+  saveTopoPositions(snap);
+  const flat = Object.values(ZONES).flat();
+  const cv   = computeTopoSize(flat, snap);
+  saveTopoCanvas(cv);
+  if (currentDevices.length) renderTopology(currentDevices);
+  lmToast('Layout Restored to Last Save', 'info', '↩');
+}
+
+// ── Factory Reset — clear all, back to default grid ───────────
+function lmFactoryReset() {
+  if (!confirm('Factory Reset: ลบตำแหน่งทั้งหมดและกลับค่าเริ่มต้น?')) return;
+  localStorage.removeItem(LM_KEY_CURRENT);
+  localStorage.removeItem(LM_KEY_SNAPSHOT);
+  localStorage.removeItem('netmon_topo_canvas');
+  if (currentDevices.length) renderTopology(currentDevices);
+  lmToast('Factory Reset Complete', 'info', '🗑');
+}
+
+// ── Export Layout as JSON ─────────────────────────────────────
+function lmExportLayout() {
+  const pos = loadTopoPositions();
+  const aliases = loadDeviceAliases();
+  const flat = Object.values(ZONES).flat();
+  // Build name-keyed export for readability
+  const out = {};
+  flat.forEach((d, idx) => {
+    const key = aliases[d.ip] || d.name;
+    const p   = pos[d.ip] || defaultTopoPos(idx);
+    out[key] = { x: p.x, y: p.y };
+  });
+  const json = JSON.stringify(out, null, 2);
+  const ts   = new Date().toISOString().slice(0,16).replace(/[T:]/g,'-');
+  downloadFile(`vlan62_layout_${ts}.json`, 'application/json', json);
+  lmToast('Layout Exported', 'success', '⬇');
+}
+
+// ── Import Layout from JSON ───────────────────────────────────
+function lmImportTrigger() {
+  document.getElementById('lmImportInput').value = '';
+  document.getElementById('lmImportInput').click();
+}
+function lmImportLayout(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (typeof data !== 'object' || Array.isArray(data)) throw new Error('Invalid format');
+      // Accept both name-keyed and IP-keyed formats
+      const flat    = Object.values(ZONES).flat();
+      const aliases = loadDeviceAliases();
+      const nameToIP = {};
+      flat.forEach(d => {
+        nameToIP[d.name] = d.ip;
+        nameToIP[aliases[d.ip] || d.name] = d.ip;
+      });
+      const pos = loadTopoPositions();
+      let imported = 0;
+      for (const [key, val] of Object.entries(data)) {
+        if (typeof val?.x !== 'number' || typeof val?.y !== 'number') continue;
+        // key can be device name/alias OR IP
+        const ip = nameToIP[key] || (flat.find(d=>d.ip===key) ? key : null);
+        if (!ip) continue;
+        pos[ip] = { x: Math.round(val.x), y: Math.round(val.y) };
+        imported++;
+      }
+      if (!imported) { lmToast('No matching devices found in file', 'error', '⚠️'); return; }
+      saveTopoPositions(pos);
+      const cv = computeTopoSize(flat, pos);
+      saveTopoCanvas(cv);
+      if (currentDevices.length) renderTopology(currentDevices);
+      lmToast(`Imported ${imported} device positions`, 'success', '⬆');
+    } catch (err) {
+      lmToast('Import failed: invalid JSON', 'error', '❌');
+    }
+  };
+  reader.readAsText(file);
+}
+
+// ── Auto Save after drag ──────────────────────────────────────
+function lmAutoSave(ip, x, y) {
+  if (!LM_AUTOSAVE) return;
+  const pos = loadTopoPositions();
+  pos[ip] = { x, y };
+  saveTopoPositions(pos);
+}
+
+// ── Viewport Pan (middle-click / space+drag / empty area drag) ─
+function initViewportPan() {
+  const vp = document.getElementById('topoViewport');
+  if (!vp || vp._lmPanInit) return;
+  vp._lmPanInit = true;
+
+  let panning = false, startX = 0, startY = 0, scrollX = 0, scrollY = 0;
+  let spaceDown = false;
+
+  // Space key pan mode
+  document.addEventListener('keydown', e => { if (e.code === 'Space') { spaceDown = true; } });
+  document.addEventListener('keyup',   e => { if (e.code === 'Space') { spaceDown = false; if (panning) stopPan(); } });
+
+  function startPan(cx, cy) {
+    panning = true;
+    startX  = cx; startY = cy;
+    scrollX = vp.scrollLeft; scrollY = vp.scrollTop;
+    vp.classList.add('panning');
+  }
+  function movePan(cx, cy) {
+    if (!panning) return;
+    vp.scrollLeft = scrollX - (cx - startX);
+    vp.scrollTop  = scrollY - (cy - startY);
+  }
+  function stopPan() {
+    panning = false;
+    vp.classList.remove('panning');
+  }
+
+  // Mouse pan — middle click or space+drag or click on empty area
+  vp.addEventListener('mousedown', e => {
+    const node = e.target.closest('.topo-node');
+    if (e.button === 1) { e.preventDefault(); startPan(e.clientX, e.clientY); return; }
+    if (spaceDown)      { e.preventDefault(); startPan(e.clientX, e.clientY); return; }
+    if (!node && e.button === 0) { startPan(e.clientX, e.clientY); }
+  });
+  document.addEventListener('mousemove', e => { if (panning) movePan(e.clientX, e.clientY); });
+  document.addEventListener('mouseup',   () => { if (panning) stopPan(); });
+
+  // Wheel zoom (override default scroll)
+  vp.addEventListener('wheel', e => {
+    if (e.ctrlKey || e.metaKey) {
+      e.preventDefault();
+      zoomTopo(e.deltaY < 0 ? 0.08 : -0.08);
+    }
+  }, { passive: false });
+
+  // Touch pan (2-finger)
+  let _t2 = null;
+  vp.addEventListener('touchstart', e => {
+    if (e.touches.length === 2) {
+      _t2 = { x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+               y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+               sl: vp.scrollLeft, st: vp.scrollTop };
+    }
+  }, { passive: true });
+  vp.addEventListener('touchmove', e => {
+    if (e.touches.length === 2 && _t2) {
+      const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      vp.scrollLeft = _t2.sl - (mx - _t2.x);
+      vp.scrollTop  = _t2.st - (my - _t2.y);
+    }
+  }, { passive: true });
+  vp.addEventListener('touchend', () => { _t2 = null; });
+}
+
+function initTopoDrag() {
+  // Only attach delegation listeners ONCE on the canvas container
+  if (_dragInitialized) return;
+  _dragInitialized = true;
+
+  const canvas = document.getElementById('topoCanvas');
+  if (!canvas) return;
+
+  // Init viewport pan once
+  initViewportPan();
+
+  let _lastClick = { ip: null, t: 0 };
+  const DBLCLICK_MS = 350;
+
+  // Helper: clamp node within canvas bounds
+  function clampPos(node, x, y) {
+    const cv     = document.getElementById('topoCanvas');
+    const nw     = node.offsetWidth  || 96;
+    const nh     = node.offsetHeight || 100;
+    const maxX   = (parseInt(cv.style.width)  || 720)  - nw;
+    const maxY   = (parseInt(cv.style.height) || 420)  - nh;
+    return { x: Math.max(4, Math.min(maxX, x)), y: Math.max(4, Math.min(maxY, y)) };
+  }
+
+  // Basic collision check: returns true if overlaps any other node
+  function hasCollision(node, x, y) {
+    const nw = node.offsetWidth  || 96;
+    const nh = node.offsetHeight || 100;
+    const nodes = canvas.querySelectorAll('.topo-node');
+    for (const other of nodes) {
+      if (other === node) continue;
+      const ox = parseInt(other.style.left, 10) || 0;
+      const oy = parseInt(other.style.top,  10) || 0;
+      const ow = other.offsetWidth  || 96;
+      const oh = other.offsetHeight || 100;
+      const PAD = 4; // allow slight overlap
+      if (x < ox + ow - PAD && x + nw - PAD > ox &&
+          y < oy + oh - PAD && y + nh - PAD > oy) return true;
+    }
+    return false;
+  }
+
+  // ── MOUSE ─────────────────────────────────────────────────
+  canvas.addEventListener('mousedown', function(event) {
+    const node = event.target.closest('.topo-node');
+    if (!node) return;
+
+    const now = Date.now();
+    const ip  = node.dataset.ip;
+
+    // Detect double-click manually (works even with preventDefault)
+    if (_lastClick.ip === ip && (now - _lastClick.t) < DBLCLICK_MS) {
+      _lastClick = { ip: null, t: 0 };
+      event.preventDefault();
+      event.stopPropagation();
+      const name = decodeURIComponent(node.dataset.name || ip);
+      openDDModal(name, ip);
+      return;
+    }
+    _lastClick = { ip, t: now };
+
+    // SINGLE CLICK + DRAG
+    if (topoLocked) return;
+    event.preventDefault();
+    event.stopPropagation();
+
+    const parent = node.parentElement;
+    const pRect  = parent.getBoundingClientRect();
+    const rect   = node.getBoundingClientRect();
+    const offX   = (event.clientX - rect.left) / topoZoom;
+    const offY   = (event.clientY - rect.top)  / topoZoom;
+
+    // Viewport scroll offset
+    const vp = document.getElementById('topoViewport');
+    const baseScrollX = vp.scrollLeft;
+    const baseScrollY = vp.scrollTop;
+
+    let hasMoved  = false;
+    let lastX     = parseInt(node.style.left, 10) || 0;
+    let lastY     = parseInt(node.style.top,  10) || 0;
+
+    // Lift animation
+    node.classList.remove('lm-placed');
+    node.classList.add('lm-dragging');
+
+    function onMove(e) {
+      hasMoved = true;
+      // Account for scroll changes during drag
+      const scrollDX = vp.scrollLeft - baseScrollX;
+      const scrollDY = vp.scrollTop  - baseScrollY;
+      let x = (e.clientX - pRect.left + scrollDX) / topoZoom - offX;
+      let y = (e.clientY - pRect.top  + scrollDY) / topoZoom - offY;
+      const clamped = clampPos(node, x, y);
+      x = clamped.x; y = clamped.y;
+      node.style.left = x + 'px';
+      node.style.top  = y + 'px';
+      lastX = x; lastY = y;
+      // Collision indicator
+      if (hasCollision(node, x, y)) node.classList.add('lm-collision');
+      else node.classList.remove('lm-collision');
+      // Live SVG update
+      lmUpdateSVG();
+    }
+    function onUp() {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup',   onUp);
+      node.classList.remove('lm-dragging', 'lm-collision');
+      node.classList.add('lm-placed');
+      setTimeout(() => node.classList.remove('lm-placed'), 300);
+      if (hasMoved) {
+        // Auto save
+        lmAutoSave(ip, lastX, lastY);
+        const pos = loadTopoPositions();
+        if (currentDevices.length) {
+          const map = {}; currentDevices.forEach(d => map[d.ip] = d);
+          renderMinimap(Object.values(ZONES).flat(), pos, map);
+        }
+        lmUpdateSVG();
+      }
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup',   onUp);
+  });
+
+  // ── TOUCH ─────────────────────────────────────────────────
+  let _touch = { ip: null, t: 0, x: 0, y: 0 };
+  canvas.addEventListener('touchstart', function(event) {
+    const node = event.target.closest('.topo-node');
+    if (!node) return;
+
+    const now = Date.now();
+    const ip  = node.dataset.ip;
+    const t0  = event.touches[0];
+
+    // Double-tap detection
+    if (_touch.ip === ip && (now - _touch.t) < DBLCLICK_MS) {
+      _touch = { ip: null, t: 0, x: 0, y: 0 };
+      event.preventDefault();
+      const name = decodeURIComponent(node.dataset.name || ip);
+      openDDModal(name, ip);
+      return;
+    }
+    _touch = { ip, t: now, x: t0.clientX, y: t0.clientY };
+
+    if (topoLocked) return;
+    event.preventDefault();
+
+    const parent = node.parentElement;
+    const pRect  = parent.getBoundingClientRect();
+    const rect   = node.getBoundingClientRect();
+    const offX   = (t0.clientX - rect.left) / topoZoom;
+    const offY   = (t0.clientY - rect.top)  / topoZoom;
+    const vp     = document.getElementById('topoViewport');
+    const baseScrollX = vp.scrollLeft;
+    const baseScrollY = vp.scrollTop;
+
+    let hasMoved = false;
+    let lastX    = parseInt(node.style.left, 10) || 0;
+    let lastY    = parseInt(node.style.top,  10) || 0;
+
+    node.classList.remove('lm-placed');
+    node.classList.add('lm-dragging');
+
+    function onTMove(e) {
+      hasMoved = true;
+      e.preventDefault();
+      const tc = e.touches[0];
+      const scrollDX = vp.scrollLeft - baseScrollX;
+      const scrollDY = vp.scrollTop  - baseScrollY;
+      let x = (tc.clientX - pRect.left + scrollDX) / topoZoom - offX;
+      let y = (tc.clientY - pRect.top  + scrollDY) / topoZoom - offY;
+      const clamped = clampPos(node, x, y);
+      x = clamped.x; y = clamped.y;
+      node.style.left = x + 'px';
+      node.style.top  = y + 'px';
+      lastX = x; lastY = y;
+      if (hasCollision(node, x, y)) node.classList.add('lm-collision');
+      else node.classList.remove('lm-collision');
+      lmUpdateSVG();
+    }
+    function onTEnd() {
+      document.removeEventListener('touchmove', onTMove);
+      document.removeEventListener('touchend',  onTEnd);
+      node.classList.remove('lm-dragging', 'lm-collision');
+      node.classList.add('lm-placed');
+      setTimeout(() => node.classList.remove('lm-placed'), 300);
+      if (hasMoved) {
+        lmAutoSave(ip, lastX, lastY);
+        const pos = loadTopoPositions();
+        if (currentDevices.length) {
+          const map = {}; currentDevices.forEach(d => map[d.ip] = d);
+          renderMinimap(Object.values(ZONES).flat(), pos, map);
+        }
+        lmUpdateSVG();
+      }
+    }
+    document.addEventListener('touchmove', onTMove, { passive: false });
+    document.addEventListener('touchend',  onTEnd);
+  }, { passive: false });
+}
+
+// ── Live SVG Connection update during drag ─────────────────────
+function lmUpdateSVG() {
+  const flat = Object.values(ZONES).flat();
+  const fw   = flat.find(d => d.name === 'Firewall');
+  const sw   = flat.find(d => d.name === 'Core Switch');
+  if (!fw || !sw) return;
+  const canvas = document.getElementById('topoCanvas');
+  const svg    = document.getElementById('topoSvg');
+  if (!svg || !canvas) return;
+
+  const map = {};
+  currentDevices.forEach(d => map[d.ip] = d);
+  const cx = 48, cy = 47;
+
+  function getPos(d) {
+    const node = canvas.querySelector(`.topo-node[data-ip="${d.ip}"]`);
+    if (node) return { x: parseInt(node.style.left,10)||0, y: parseInt(node.style.top,10)||0 };
+    return defaultTopoPos(flat.indexOf(d));
+  }
+
+  const fwP = getPos(fw);
+  const swP = getPos(sw);
+  let lines = '';
+  const x1=fwP.x+cx, y1=fwP.y+cy, x2=swP.x+cx, y2=swP.y+cy;
+  lines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="rgba(0,200,255,.35)" stroke-width="2" stroke-dasharray="6,4"/>`;
+  flat.forEach(d => {
+    if (d.ip===fw.ip || d.ip===sw.ip) return;
+    const p2 = getPos(d);
+    const isUp = map[d.ip]?.status === 'up';
+    const col  = isUp ? 'rgba(0,229,160,.15)' : 'rgba(255,64,96,.2)';
+    lines += `<line x1="${swP.x+cx}" y1="${swP.y+cy}" x2="${p2.x+cx}" y2="${p2.y+cy}" stroke="${col}" stroke-width="1" stroke-dasharray="4,6"/>`;
+  });
+  svg.innerHTML = lines;
+}
+
+// legacy — kept for compat but replaced above
+function startTopoDrag() {}
 
 // ── EVENT LOG / HISTORY ──────────────────────────────────────
 function renderEventLog() {
@@ -1563,6 +2221,137 @@ function renderDailyReport() {
     </div>`;
   }).join('');
 }
+
+
+// ── TOPOLOGY DEVICE DETAIL MODAL ─────────────────────────────
+let _ddCurrentName = '', _ddCurrentIp = '';
+
+function openDDModal(name, ip) {
+  _ddCurrentName = name;
+  _ddCurrentIp   = ip;
+
+  const flat      = Object.values(ZONES).flat();
+  const aliases   = loadDeviceAliases();
+  const types     = loadDeviceTypes();
+  const devStat   = currentDevices.find(d => d.ip === ip);
+  const isUp      = devStat?.status === 'up';
+  const stClass   = isUp ? 'up' : 'down';
+  const alias     = aliases[ip] || name;
+  const selType   = types[name] || inferDeviceType(name);
+  const dur       = devStat?.down_duration || '';
+  const lastUpd   = devStat?.last_update || '—';
+
+  // Find zone
+  let zone = '—';
+  for (const [z, list] of Object.entries(ZONES)) {
+    if (list.find(d => d.ip === ip)) { zone = z; break; }
+  }
+
+  // Events for this device
+  const events   = currentEvents.filter(e => e.name === name || e.ip === ip);
+  const downs    = events.filter(e => e.type === 'DOWN');
+  const upEvts   = events.filter(e => e.type === 'UP');
+  const totalSec = upEvts.reduce((s, e) => s + ddParseDur(e.duration || ''), 0);
+  const today    = new Date().toLocaleDateString('en-GB').replace(/\//g,'\/');
+  const todayEvts= events.filter(e => (e.ts||'').startsWith(today.split('\/').reverse().join('\/')));
+
+  // Uptime %
+  const totalEvts = downs.length + upEvts.length;
+  const uptimePct = totalEvts ? Math.round(upEvts.length / Math.max(downs.length, 1) * 100) : (isUp ? 100 : 0);
+
+  // Last incident
+  const lastInc = events.length ? events[events.length - 1]?.ts || '—' : '—';
+
+  // Update icon
+  document.getElementById('ddIcon').textContent = iconForType(selType);
+  const iconWrap = document.getElementById('ddIconWrap');
+  iconWrap.className = 'dd-icon-wrap ' + stClass;
+
+  // Name / IP
+  document.getElementById('ddName').textContent = alias;
+  document.getElementById('ddIp').textContent   = ip;
+
+  // Status badge
+  const badgesCls = isUp ? 'online' : 'offline';
+  const badgeTxt  = isUp ? '🟢 ONLINE' : '🔴 OFFLINE';
+  let badgesHtml  = `<span class="dd-badge ${badgesCls}"><span class="dd-badge-dot"></span>${badgeTxt}</span>`;
+  if (!isUp && dur) badgesHtml += `<span class="dd-badge warning">↓ ${dur}</span>`;
+  document.getElementById('ddBadges').innerHTML = badgesHtml;
+
+  // Stats
+  document.getElementById('dds-down').textContent    = downs.length;
+  document.getElementById('dds-uptime').textContent  = uptimePct + '%';
+  document.getElementById('dds-downtime').textContent= ddFormatSec(totalSec) || '0s';
+  document.getElementById('dds-today').textContent   = todayEvts.length;
+
+  // Info cells
+  document.getElementById('ddLastCheck').textContent    = lastUpd;
+  document.getElementById('ddLastIncident').textContent = lastInc;
+  document.getElementById('ddCurDown').textContent      = (!isUp && dur) ? dur : (isUp ? '— (Online)' : '—');
+  document.getElementById('ddZone').textContent         = zone;
+
+  // Timeline
+  const tl = document.getElementById('ddTimeline');
+  const recent = events.slice().reverse().slice(0, 20);
+  if (!recent.length) {
+    tl.innerHTML = '<div class="dd-empty"><div class="dd-empty-ico">📭</div>No events recorded for this device</div>';
+  } else {
+    tl.innerHTML = recent.map((e, i) => {
+      const isD  = e.type === 'DOWN';
+      const cls  = isD ? 'd' : 'u';
+      const icon = isD ? '🔴' : '🟢';
+      const lbl  = isD ? 'DOWN' : 'RECOVER';
+      const durHtml = e.duration ? `<span class="dd-ev-dur">↑ ${e.duration}</span>` : '';
+      return `<div class="dd-ev ${cls}" style="animation-delay:${i*0.03}s">
+        <span class="dd-ev-badge">${icon} ${lbl}</span>
+        <span class="dd-ev-ts">${e.ts}</span>
+        ${durHtml}
+      </div>`;
+    }).join('');
+  }
+
+  // Footer info
+  document.getElementById('ddFootInfo').textContent = `${events.length} total events · Zone: ${zone}`;
+
+  // Open
+  document.getElementById('ddOverlay').classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDDModal() {
+  document.getElementById('ddOverlay').classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+function ddOpenEdit() {
+  closeDDModal();
+  openDeviceModal(_ddCurrentName, _ddCurrentIp);
+}
+
+function ddParseDur(str) {
+  if (!str) return 0;
+  let s = 0;
+  const h = str.match(/(\d+)h/); if (h) s += parseInt(h[1]) * 3600;
+  const m = str.match(/(\d+)m/); if (m) s += parseInt(m[1]) * 60;
+  const sc= str.match(/(\d+)s/); if (sc) s += parseInt(sc[1]);
+  return s;
+}
+function ddFormatSec(s) {
+  if (!s) return '0s';
+  const h = Math.floor(s/3600), m = Math.floor((s%3600)/60), sc = s%60;
+  if (h>0) return h+'h '+m+'m';
+  if (m>0) return m+'m '+sc+'s';
+  return sc+'s';
+}
+
+// Close DD modal with Escape key
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (document.getElementById('ddOverlay').classList.contains('open')) closeDDModal();
+  }
+});
+
+// Touch double-tap handled inside initTopoDrag() via event delegation
 
 // ── DEVICE MODAL ─────────────────────────────────────────────
 function openDeviceModal(name, ip) {
