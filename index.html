@@ -1455,6 +1455,26 @@ body {
   .btn, .flt, .tab { outline-offset: 2px; }
 }
 
+/* ── TOPOLOGY SEARCH HIGHLIGHT ── */
+.topo-node.topo-search-match {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(0,200,255,.35), 0 0 20px rgba(0,200,255,.2) !important;
+  z-index: 15 !important;
+}
+.topo-node.topo-search-dim {
+  opacity: 0.25;
+}
+.topo-node.topo-search-match .topo-name {
+  color: var(--accent);
+}
+
+/* Mobile: no glow on search match, just border */
+@media (max-width: 767px) {
+  .topo-node.topo-search-match {
+    box-shadow: 0 0 0 2px var(--accent) !important;
+  }
+}
+
 /* ═══════════════════════════════════════════════════════════════
    MOBILE PERFORMANCE — ≤ 767px
    Disables animations, blur, glow, heavy shadows, minimap.
@@ -1678,6 +1698,19 @@ body {
     </div>
     <!-- Pan hint -->
     <div class="topo-pan-hint" id="topoPanHint">🖱 Hold Shift+drag or middle-click to pan</div>
+  </div>
+
+  <!-- Topology Search Bar -->
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap">
+    <div class="search-wrap" style="max-width:280px;width:100%;flex:1 1 180px">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" id="topoSearchInput" type="text"
+        placeholder="ค้นหาอุปกรณ์ใน Topology…"
+        oninput="onTopoSearch(this.value)"
+        autocomplete="off">
+      <button class="search-clear" id="topoSearchClear" onclick="clearTopoSearch()">✕</button>
+    </div>
+    <div id="topoSearchResult" style="font-size:11px;font-family:var(--mono);color:var(--muted);white-space:nowrap"></div>
   </div>
   <!-- Layout status bar -->
   <div class="topo-status-bar" id="topoStatusBar">
@@ -1926,6 +1959,7 @@ function switchTab(tab, el) {
   document.querySelector('.meta').style.display             = tab==='monitor'  ? 'flex'  : 'none';
   document.querySelector('.alert-wrap').style.display       = tab==='monitor'  ? 'block' : 'none';
   if (tab==='topology' && currentDevices.length) renderTopology(currentDevices);
+  if (tab!=='topology') clearTopoSearch();
   if (tab==='history')  { initHistoryTab(); renderEventLog(); }
   if (tab==='dashboard') renderDashboard();
 }
@@ -3417,19 +3451,23 @@ function formatSeconds(s) {
 
 // ── FETCH DATA ────────────────────────────────────────────────
 async function fetchMessage(msgId) {
-  const r = await fetch(`https://api.telegram.org/bot${TOKEN}/forwardMessage`, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({chat_id:CHAT_ID, from_chat_id:CHAT_ID, message_id:msgId})
-  });
-  const fd = await r.json();
-  if (fd.ok && fd.result?.text) {
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${TOKEN}/forwardMessage`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({chat_id:CHAT_ID, from_chat_id:CHAT_ID, message_id:msgId})
+    });
+    if (!r.ok) return null;
+    const fd = await r.json().catch(() => null);
+    if (!fd || !fd.ok || !fd.result?.text) return null;
+    // delete forwarded message silently
     fetch(`https://api.telegram.org/bot${TOKEN}/deleteMessage`, {
       method:'POST', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({chat_id:CHAT_ID, message_id:fd.result.message_id})
-    });
+    }).catch(() => {});
     return fd.result.text;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 const prevStatuses = {};
@@ -3443,7 +3481,6 @@ async function doLoad() {
     if (sText) {
       const p = JSON.parse(sText);
       if (p.NETMON_STATUS && p.devices) {
-        // detect status changes for notifications
         p.devices.forEach(d=>{
           const prev = prevStatuses[d.ip];
           if (prev !== undefined && prev !== d.status) {
@@ -3462,28 +3499,35 @@ async function doLoad() {
     if (LOG_MID) {
       const lText = await fetchMessage(LOG_MID);
       if (lText) {
-        const lp = JSON.parse(lText);
-        if (lp.NETMON_LOG) {
-          currentEvents = lp.events || [];
-          if (activeTab==='history') renderEventLog();
-        }
+        try {
+          const lp = JSON.parse(lText);
+          if (lp.NETMON_LOG) {
+            currentEvents = lp.events || [];
+            if (activeTab==='history') renderEventLog();
+          }
+        } catch {}
       }
     } else {
       // fallback: getUpdates
-      const res  = await fetch(`https://api.telegram.org/bot${TOKEN}/getUpdates?limit=100&offset=-100`);
-      const data = await res.json();
-      if (data.ok) {
-        for (let i=data.result.length-1;i>=0;i--) {
-          const txt = data.result[i].message?.text||'';
-          if (txt.includes('"NETMON_LOG"')) {
-            try { const lp=JSON.parse(txt); if(lp.NETMON_LOG){currentEvents=lp.events||[];break;} } catch {}
+      try {
+        const res  = await fetch(`https://api.telegram.org/bot${TOKEN}/getUpdates?limit=100&offset=-100`);
+        if (res.ok) {
+          const data = await res.json().catch(() => ({ ok: false }));
+          if (data.ok) {
+            for (let i=data.result.length-1;i>=0;i--) {
+              const txt = data.result[i].message?.text||'';
+              if (txt.includes('"NETMON_LOG"')) {
+                try { const lp=JSON.parse(txt); if(lp.NETMON_LOG){currentEvents=lp.events||[];break;} } catch {}
+              }
+            }
           }
         }
-      }
+      } catch {}
     }
     startCD();
   } catch(e) {
-    showErr('⚠️ Connection failed: ' + e.message);
+    // Silent fail — just restart countdown, no browser error sound
+    startCD();
   }
   document.getElementById('ico').classList.remove('spinning');
   document.getElementById('btnR').disabled = false;
@@ -3492,6 +3536,101 @@ async function doLoad() {
 function showErr(msg) {
   const el=document.getElementById('err');
   el.textContent=msg; el.style.display='block';
+}
+
+// ── TOPOLOGY SEARCH ──────────────────────────────────────────
+let _topoSearchTimer = null;
+
+function onTopoSearch(q) {
+  document.getElementById('topoSearchClear').style.display = q ? 'block' : 'none';
+  clearTimeout(_topoSearchTimer);
+  _topoSearchTimer = setTimeout(() => applyTopoSearch(q.trim().toLowerCase()), 200);
+}
+
+function clearTopoSearch() {
+  document.getElementById('topoSearchInput').value = '';
+  document.getElementById('topoSearchClear').style.display = 'none';
+  document.getElementById('topoSearchResult').textContent = '';
+  // Remove all highlight classes
+  document.querySelectorAll('.topo-node').forEach(n => {
+    n.classList.remove('topo-search-match', 'topo-search-dim');
+  });
+}
+
+function applyTopoSearch(q) {
+  const resultEl = document.getElementById('topoSearchResult');
+  const nodes = document.querySelectorAll('.topo-node');
+  if (!q) { clearTopoSearch(); return; }
+
+  const aliases = loadDeviceAliases();
+  let matches = [];
+
+  nodes.forEach(node => {
+    const ip      = node.dataset.ip || '';
+    const nameRaw = decodeURIComponent(node.dataset.name || '');
+    const alias   = aliases[ip] || nameRaw;
+    const nameEl  = node.querySelector('.topo-name');
+    const dispName = nameEl ? nameEl.textContent.toLowerCase() : '';
+    const lastOctet = '.' + ip.split('.').pop();
+
+    const isMatch = dispName.includes(q) ||
+                    nameRaw.toLowerCase().includes(q) ||
+                    alias.toLowerCase().includes(q) ||
+                    ip.includes(q) ||
+                    lastOctet.includes(q);
+
+    if (isMatch) {
+      matches.push(node);
+      node.classList.add('topo-search-match');
+      node.classList.remove('topo-search-dim');
+    } else {
+      node.classList.remove('topo-search-match');
+      node.classList.add('topo-search-dim');
+    }
+  });
+
+  if (matches.length === 0) {
+    resultEl.textContent = '❌ ไม่พบอุปกรณ์';
+    resultEl.style.color = 'var(--down)';
+    return;
+  }
+
+  // Scroll to first match
+  scrollToTopoNode(matches[0]);
+
+  // Show result info
+  if (matches.length === 1) {
+    const ip      = matches[0].dataset.ip || '';
+    const nameEl  = matches[0].querySelector('.topo-name');
+    const name    = nameEl ? nameEl.textContent : ip;
+    // Find zone
+    let zone = '—';
+    for (const [z, list] of Object.entries(ZONES)) {
+      if (list.find(d => d.ip === ip)) { zone = z; break; }
+    }
+    resultEl.textContent = `✅ พบ: ${name} · Zone: ${zone} · ${ip}`;
+    resultEl.style.color = 'var(--up)';
+  } else {
+    resultEl.textContent = `✅ พบ ${matches.length} อุปกรณ์`;
+    resultEl.style.color = 'var(--accent)';
+  }
+}
+
+function scrollToTopoNode(node) {
+  const viewport = document.getElementById('topoViewport');
+  if (!viewport || !node) return;
+  const x = parseInt(node.style.left, 10) || 0;
+  const y = parseInt(node.style.top,  10) || 0;
+  const nodeW = node.offsetWidth  || 90;
+  const nodeH = node.offsetHeight || 90;
+  // Center the node in the viewport, accounting for zoom
+  const vpW = viewport.clientWidth;
+  const vpH = viewport.clientHeight;
+  const scrollX = (x + nodeW / 2) * topoZoom - vpW / 2;
+  const scrollY = (y + nodeH / 2) * topoZoom - vpH / 2;
+  viewport.scrollTo({ left: Math.max(0, scrollX), top: Math.max(0, scrollY), behavior: 'smooth' });
+  // Flash the node briefly
+  node.classList.add('topo-search-match');
 }
 
 // ── SKELETON ─────────────────────────────────────────────────
