@@ -1455,6 +1455,80 @@ body {
   .btn, .flt, .tab { outline-offset: 2px; }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   MOBILE PERFORMANCE — ≤ 767px
+   Disables animations, blur, glow, heavy shadows, minimap.
+   Enables GPU compositing on topology critical path.
+   ═══════════════════════════════════════════════════════════════ */
+@media (max-width: 767px) {
+  /* ── Kill ALL animations & transitions ── */
+  *, *::before, *::after {
+    animation: none !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  /* ── Kill backdrop-filter blur (huge GPU cost on mobile) ── */
+  .hdr, .hdr * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+  .notif-panel {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(8,13,20,.99) !important;
+  }
+  .dd-overlay, .modal-overlay {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(0,0,0,.88) !important;
+  }
+  .topo-confirm {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: rgba(0,0,0,.85) !important;
+  }
+  .hdr {
+    background: rgba(2,4,8,.98) !important;
+  }
+
+  /* ── Kill body decorative backgrounds (grid lines + radial glow) ── */
+  body::before, body::after { display: none !important; }
+
+  /* ── Kill box-shadow glow ── */
+  .topo-node, .topo-node.up, .topo-node.down,
+  .dcard, .dcard.up, .dcard.down,
+  .brand-icon, .modal-box, .dd-box, .topo-toast,
+  .topo-drag-ghost { box-shadow: none !important; }
+
+  /* ── Keep minimap hidden on mobile (already hidden at ≤600px but enforce here too) ── */
+  .minimap, #minimap { display: none !important; }
+
+  /* ── Topology: GPU compositing layer for the scaled outer ── */
+  .topo-canvas-outer {
+    transform: translateZ(0);
+    will-change: transform;
+    transition: none !important;
+  }
+
+  /* ── Disable will-change on dcard (reduces memory pressure) ── */
+  .dcard { will-change: auto !important; }
+
+  /* ── Topo node: contain layout/paint ── */
+  .topo-node {
+    contain: layout style;
+    transform: translateZ(0);
+  }
+
+  /* ── Progress fill: skip transition ── */
+  .prog-fill { transition: none !important; }
+
+  /* ── stat-n counter animation: skip ── */
+  .stat-n.updated { animation: none !important; }
+}
+
 </style>
 </head>
 <body>
@@ -1742,7 +1816,25 @@ const TOKEN      = "8830819103:AAHrzzpGlJR2GY0yK2k-pw8SIENeBiBteI4";
 const CHAT_ID    = "8741011248";
 const STATUS_MID = 33;
 let   LOG_MID    = 1823;
-const REFRESH    = 60;
+
+// Mobile: reduce refresh to 15 s to lower battery/CPU use
+const IS_MOBILE = window.matchMedia('(max-width: 767px)').matches ||
+                  ('ontouchstart' in window && window.innerWidth <= 767);
+const REFRESH   = IS_MOBILE ? 15 : 60;
+
+// ── PERF UTILITIES ───────────────────────────────────────────
+function debounce(fn, ms) {
+  let t; return function(...a) { clearTimeout(t); t = setTimeout(() => fn.apply(this,a), ms); };
+}
+function throttle(fn, ms) {
+  let last = 0, t;
+  return function(...a) {
+    const now = Date.now();
+    const rem  = ms - (now - last);
+    if (rem <= 0) { last = now; fn.apply(this,a); }
+    else { clearTimeout(t); t = setTimeout(() => { last = Date.now(); fn.apply(this,a); }, rem); }
+  };
+}
 
 // ── STATE ────────────────────────────────────────────────────
 let filterMode    = 'all';
@@ -2005,61 +2097,114 @@ function renderOfflineAlert(downs) {
 
 // ── DASHBOARD ────────────────────────────────────────────────
 function renderDashboard() {
-  const up   = currentDevices.filter(d=>d.status==='up').length;
-  const dn   = currentDevices.filter(d=>d.status==='down').length;
-  const tot  = up + dn;
-  const uptPct = tot ? Math.round(up/tot*100) : 0;
-  const dwnPct = tot ? Math.round(dn/tot*100) : 0;
+  // ── Live device counts from currentDevices (real-time) ──
+  const up    = currentDevices.filter(d => d.status === 'up').length;
+  const dn    = currentDevices.filter(d => d.status === 'down').length;
+  const tot   = up + dn;
+  const uptPct = tot ? Math.round(up / tot * 100) : 0;
+  const dwnPct = tot ? Math.round(dn / tot * 100) : 0;
 
-  // calc avg downtime from events
-  const upEvts = currentEvents.filter(e=>e.type==='UP'&&e.duration);
+  // ── Currently offline devices (live) ──
+  const liveDownDevices = currentDevices.filter(d => d.status === 'down');
+
+  // ── Avg downtime: only from resolved (UP) events that have a duration ──
+  const upEvts = currentEvents.filter(e => e.type === 'UP' && e.duration);
   let totalSec = 0;
   upEvts.forEach(e => totalSec += parseDuration(e.duration));
-  const avgSec = upEvts.length ? Math.round(totalSec/upEvts.length) : 0;
-  const avgStr = avgSec ? formatSeconds(avgSec) : '—';
+  const avgSec = upEvts.length ? Math.round(totalSec / upEvts.length) : 0;
+  const avgStr = avgSec ? formatSeconds(avgSec) : (currentEvents.length ? 'No data' : '—');
 
-  // last incident
-  const downs = currentEvents.filter(e=>e.type==='DOWN');
-  const lastInc = downs.length ? downs[downs.length-1] : null;
-  const lastIncStr = lastInc ? `${lastInc.name} (${lastInc.ts.split(' ')[1]||lastInc.ts})` : 'None';
+  // ── Last Incident: device that went down most recently (shortest duration = most recent) ──
+  let lastIncName = '—';
+  let lastIncSub  = 'No incidents recorded';
+
+  if (liveDownDevices.length > 0) {
+    // Sort: devices with valid duration — shortest = most recent.
+    // Devices with no duration (just went down, no data yet) go first.
+    const sorted = [...liveDownDevices].sort((a, b) => {
+      const sa = parseDuration(a.down_duration || '');
+      const sb = parseDuration(b.down_duration || '');
+      // Both have no duration → equal
+      if (sa === 0 && sb === 0) return 0;
+      // No duration = just happened → sort first
+      if (sa === 0) return -1;
+      if (sb === 0) return 1;
+      return sa - sb;
+    });
+    const recent = sorted[0];
+    lastIncName = recent.name || recent.ip;
+    const durSec = parseDuration(recent.down_duration || '');
+    // Calculate approximate time device went down
+    let downSince = '';
+    if (durSec > 0) {
+      const downAt = new Date(Date.now() - durSec * 1000);
+      const dd = String(downAt.getDate()).padStart(2,'0');
+      const mm = String(downAt.getMonth()+1).padStart(2,'0');
+      const hh = String(downAt.getHours()).padStart(2,'0');
+      const mi = String(downAt.getMinutes()).padStart(2,'0');
+      downSince = ` · since ${dd}/${mm} ${hh}:${mi}`;
+    }
+    lastIncSub  = durSec > 0
+      ? `🔴 DOWN ${recent.down_duration}${downSince}`
+      : '🔴 Currently DOWN · Just now';
+  } else if (currentEvents.length > 0) {
+    // No live downs — find most recent DOWN event
+    const downEvts = [...currentEvents].filter(e => e.type === 'DOWN');
+    if (downEvts.length) {
+      // Sort by parsed timestamp descending
+      downEvts.sort((a, b) => {
+        const ta = parseEventDate(a.ts) || 0;
+        const tb = parseEventDate(b.ts) || 0;
+        return tb - ta;
+      });
+      const latest = downEvts[0];
+      const timePart = latest.ts ? (latest.ts.split(' ')[1] || latest.ts) : '';
+      lastIncName = latest.name || latest.ip;
+      lastIncSub  = latest.ts || 'Unknown time';
+    }
+  }
+
+  // ── Event counts ──
+  const allDownEvts = currentEvents.filter(e => e.type === 'DOWN');
+  const hasEvents   = currentEvents.length > 0;
 
   document.getElementById('dashCards').innerHTML = `
     <div class="dash-card c-up">
-      <div class="dash-value" id="dv-up">${uptPct}%</div>
+      <div class="dash-value">${tot ? uptPct + '%' : '—'}</div>
       <div class="dash-label">Uptime Rate</div>
-      <div class="dash-sub">${up} of ${tot} devices online</div>
+      <div class="dash-sub">${tot ? up + ' of ' + tot + ' devices online' : 'No data yet'}</div>
       <div class="dash-bar"><div class="dash-bar-fill" style="width:${uptPct}%"></div></div>
       <div class="dash-icon">✅</div>
     </div>
     <div class="dash-card c-down">
-      <div class="dash-value">${dwnPct}%</div>
+      <div class="dash-value">${tot ? dwnPct + '%' : '—'}</div>
       <div class="dash-label">Offline Rate</div>
-      <div class="dash-sub">${dn} device${dn!==1?'s':''} currently down</div>
+      <div class="dash-sub">${dn > 0 ? dn + ' device' + (dn !== 1 ? 's' : '') + ' currently down' : tot ? 'All devices online ✅' : 'No data yet'}</div>
       <div class="dash-bar"><div class="dash-bar-fill" style="width:${dwnPct}%"></div></div>
       <div class="dash-icon">⚠️</div>
     </div>
     <div class="dash-card c-blue">
-      <div class="dash-value">${tot}</div>
+      <div class="dash-value">${tot || '—'}</div>
       <div class="dash-label">Total Devices</div>
       <div class="dash-sub">VLAN 62 · 10.0.62.x</div>
       <div class="dash-icon">🖥️</div>
     </div>
     <div class="dash-card c-warn">
-      <div class="dash-value" style="font-size:20px;padding-top:4px">${avgStr}</div>
+      <div class="dash-value" style="font-size:${avgSec?'20px':'28px'};padding-top:${avgSec?'4px':'0'}">${avgStr}</div>
       <div class="dash-label">Avg Downtime</div>
-      <div class="dash-sub">Per incident (${upEvts.length} resolved)</div>
+      <div class="dash-sub">${upEvts.length ? 'Per incident · ' + upEvts.length + ' resolved' : 'No resolved incidents yet'}</div>
       <div class="dash-icon">⏱️</div>
     </div>
     <div class="dash-card c-purple">
-      <div class="dash-value">${currentEvents.length}</div>
+      <div class="dash-value">${hasEvents ? currentEvents.length : '—'}</div>
       <div class="dash-label">Total Events</div>
-      <div class="dash-sub">${downs.length} down · ${upEvts.length} recovered</div>
+      <div class="dash-sub">${hasEvents ? allDownEvts.length + ' down · ' + upEvts.length + ' recovered' : 'No events loaded yet'}</div>
       <div class="dash-icon">📊</div>
     </div>
     <div class="dash-card c-teal">
-      <div class="dash-value" style="font-size:16px;padding-top:6px">${lastIncStr}</div>
+      <div class="dash-value" style="font-size:14px;padding-top:6px;line-height:1.3">${lastIncName}</div>
       <div class="dash-label">Last Incident</div>
-      <div class="dash-sub">${lastInc ? lastInc.ts : 'No incidents recorded'}</div>
+      <div class="dash-sub" style="color:${liveDownDevices.length?'var(--down)':'var(--text2)'}">${lastIncSub}</div>
       <div class="dash-icon">🕐</div>
     </div>
   `;
