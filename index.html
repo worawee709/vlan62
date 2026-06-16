@@ -2667,16 +2667,22 @@ function initTopoPan() {
     }
   }, { passive: false });
 
-  // Two-finger pinch on touch
+  // Two-finger pinch on touch — zoom toward finger midpoint
   let _lastPinchDist = 0;
+  let _lastPinchMid  = null;
   viewport.addEventListener('touchstart', e => {
     if (e.touches.length === 2) {
       _lastPinchDist = Math.hypot(
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
+      _lastPinchMid = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+      };
     }
   }, { passive: true });
+
   viewport.addEventListener('touchmove', e => {
     if (e.touches.length === 2) {
       e.preventDefault();
@@ -2684,13 +2690,32 @@ function initTopoPan() {
         e.touches[0].clientX - e.touches[1].clientX,
         e.touches[0].clientY - e.touches[1].clientY
       );
-      if (_lastPinchDist > 0) {
-        const scale = dist / _lastPinchDist;
-        topoZoom = Math.max(0.2, Math.min(3.0, topoZoom * scale));
+      const mid = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2
+      };
+
+      if (_lastPinchDist > 0 && _lastPinchMid) {
+        const scale    = dist / _lastPinchDist;
+        const oldZoom  = topoZoom;
+        const newZoom  = Math.max(0.2, Math.min(3.0, oldZoom * scale));
+
+        // Focal point: canvas coords under finger midpoint
+        const rect   = viewport.getBoundingClientRect();
+        const focalX = (viewport.scrollLeft + (mid.x - rect.left)) / oldZoom;
+        const focalY = (viewport.scrollTop  + (mid.y - rect.top))  / oldZoom;
+
+        topoZoom = newZoom;
         applyZoom();
+
+        // Adjust scroll so focal point stays under fingers
+        viewport.scrollLeft = focalX * newZoom - (mid.x - rect.left);
+        viewport.scrollTop  = focalY * newZoom - (mid.y - rect.top);
+
         showZoomBadge();
       }
       _lastPinchDist = dist;
+      _lastPinchMid  = mid;
     }
   }, { passive: false });
 
