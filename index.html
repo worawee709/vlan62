@@ -553,24 +553,43 @@ body::after {
   .filter-row .search-wrap { flex-basis: 100%; max-width: 100% !important; order: 10; }
   /* monitor 1-col */
   .grid { grid-template-columns: 1fr; }
-  /* dash 1-col */
-  .dash-cards { grid-template-columns: 1fr; }
+  /* dash 2-col (more compact than 1-col) */
+  .dash-cards { grid-template-columns: repeat(2, 1fr); }
   /* modal fullscreen slide-up */
   .modal-overlay { padding: 0; align-items: flex-end; }
   .modal-box { border-radius: 18px 18px 0 0; max-height: 94vh; width: 100%; max-width: 100%; }
   /* notif panel full width */
   .notif-panel { width: 100%; right: -100%; }
   .notif-panel.open { right: 0; }
-  /* topo actions grid */
-  .topo-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-  .topo-actions .zoom-controls { grid-column: 1 / -1; }
+  /* topo actions — collapse to scrollable single row */
+  .topo-actions {
+    display: flex; flex-wrap: nowrap; overflow-x: auto;
+    gap: 6px; padding-bottom: 6px;
+    scrollbar-width: none; -ms-overflow-style: none;
+  }
+  .topo-actions::-webkit-scrollbar { display: none; }
   .topo-actions .topo-sep { display: none; }
+  .topo-actions .topo-pan-hint { display: none; }
+  .topo-btn-group { flex-shrink: 0; }
+  .zoom-controls { flex-shrink: 0; }
   /* topo nodes slightly smaller */
   .topo-node { width: 70px; min-height: 72px; }
   .topo-icon { font-size: 14px; }
   .minimap { display: none; }
   /* history tabs scrollable, smaller */
   .htab { padding: 6px 10px 8px; font-size: 10px; }
+  /* tab bar — shrink text */
+  .tab { font-size: 11px; padding: 8px 6px; }
+  /* notification panel — prevent page scroll bleed */
+  .notif-panel { overscroll-behavior: contain; }
+  /* dd-box full bottom sheet */
+  .dd-overlay { padding: 0; align-items: flex-end; }
+  .dd-box { max-width: 100%; border-radius: 20px 20px 0 0; max-height: 92vh; }
+  .dd-stats { grid-template-columns: repeat(2, 1fr); }
+  /* alert box scrollable */
+  .alert-box { max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; }
+  /* topology search full width */
+  #topoSearchInput { font-size: 14px; }
 }
 
 /* ─── Mobile landscape + small tablet 481–767px ─── */
@@ -1824,6 +1843,10 @@ body {
           <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">Zone</div>
           <div style="font-size:12px;font-family:var(--mono);color:var(--accent)" id="ddZone">—</div>
         </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 12px;grid-column:1/-1">
+          <div style="font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px">🟢 กลับมาออนไลน์ล่าสุด</div>
+          <div style="font-size:12px;font-family:var(--mono);color:var(--up)" id="ddLastRecover">—</div>
+        </div>
       </div>
       <!-- History -->
       <div class="dd-sec-hdr">Recent History</div>
@@ -1980,8 +2003,10 @@ function switchHistoryTab(tab, el) {
 // ── FILTER & SEARCH ──────────────────────────────────────────
 function setFilter(mode, el) {
   filterMode = mode;
-  document.querySelectorAll('.filter-row .flt').forEach(b => b.classList.remove('active'));
-  if (el) el.classList.add('active');
+  document.querySelectorAll('.filter-row .flt').forEach(b => {
+    b.classList.toggle('active', b.getAttribute('onclick').includes(`'${mode}'`));
+  });
+  if (el) { document.querySelectorAll('.filter-row .flt').forEach(b=>b.classList.remove('active')); el.classList.add('active'); }
   if (currentDevices.length) renderMonitor(currentDevices);
 }
 
@@ -2049,10 +2074,14 @@ function renderMonitor(devices) {
       matchCount++;
       zMatch++;
       const icon = iconFor(d.name);
-      const dur  = !isUp && d.down_duration
-        ? `<div class="dcard-dur">${d.down_duration}</div>` : '';
-      const safe = JSON.stringify;
-      zh += `<div class="dcard ${isUp?'up':'down'}" tabindex="0" role="button" onclick="openDeviceModal(${safe(d.name)},${safe(d.ip)})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDeviceModal(${safe(d.name)},${safe(d.ip)})}">
+      const durSec = parseDuration(d.down_duration || '');
+      const durStr = durSec > 0 ? d.down_duration : 'Just now';
+      const dur  = !isUp
+        ? `<div class="dcard-dur">${durStr}</div>` : '';
+      zh += `<div class="dcard ${isUp?'up':'down'}" tabindex="0" role="button"
+        data-dname="${encodeURIComponent(d.name)}" data-dip="${d.ip}"
+        onclick="_dcardClick(event,this)"
+        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();_dcardClick(event,this)}">
         <div class="dcard-top">
           <div style="display:flex;align-items:center;gap:6px;flex:1;min-width:0">
             <span class="dcard-icon">${icon}</span>
@@ -2117,15 +2146,17 @@ function animateStatNum(id, val) {
 function renderOfflineAlert(downs) {
   const box = document.getElementById('alertBox');
   if (!downs.length) { box.style.display='none'; return; }
-  document.getElementById('alertBody').innerHTML = downs.map(d =>
-    `<div class="alert-row">
+  document.getElementById('alertBody').innerHTML = downs.map(d => {
+      const alertDurSec = parseDuration(d.down_duration || '');
+      const alertDurStr = alertDurSec > 0 ? d.down_duration : 'Just now';
+      return `<div class="alert-row" style="cursor:pointer" data-dname="${encodeURIComponent(d.name)}" data-dip="${d.ip}" onclick="_dcardClick(event,this)">
       <div>
         <div style="font-weight:600">${d.display_name||d.name}</div>
         <div style="font-size:11px;color:var(--muted);font-family:var(--mono)">${d.ip}</div>
       </div>
-      ${d.down_duration?`<span class="alert-dur">${d.down_duration}</span>`:''}
-    </div>`
-  ).join('');
+      <span class="alert-dur">${alertDurStr}</span>
+    </div>`;
+  }).join('');
   box.style.display = 'block';
 }
 
@@ -2150,6 +2181,7 @@ function renderDashboard() {
 
   // ── Last Incident: device that went down most recently (shortest duration = most recent) ──
   let lastIncName = '—';
+  let lastIncIp   = '';
   let lastIncSub  = 'No incidents recorded';
 
   if (liveDownDevices.length > 0) {
@@ -2167,6 +2199,7 @@ function renderDashboard() {
     });
     const recent = sorted[0];
     lastIncName = recent.name || recent.ip;
+    lastIncIp   = recent.ip;
     const durSec = parseDuration(recent.down_duration || '');
     // Calculate approximate time device went down
     let downSince = '';
@@ -2194,6 +2227,7 @@ function renderDashboard() {
       const latest = downEvts[0];
       const timePart = latest.ts ? (latest.ts.split(' ')[1] || latest.ts) : '';
       lastIncName = latest.name || latest.ip;
+      lastIncIp   = latest.ip || '';
       lastIncSub  = latest.ts || 'Unknown time';
     }
   }
@@ -2203,39 +2237,39 @@ function renderDashboard() {
   const hasEvents   = currentEvents.length > 0;
 
   document.getElementById('dashCards').innerHTML = `
-    <div class="dash-card c-up">
+    <div class="dash-card c-up" style="cursor:pointer" onclick="switchTab('monitor',document.querySelector('.tab'));setFilter('online')" title="ดูอุปกรณ์ที่ Online">
       <div class="dash-value">${tot ? uptPct + '%' : '—'}</div>
       <div class="dash-label">Uptime Rate</div>
       <div class="dash-sub">${tot ? up + ' of ' + tot + ' devices online' : 'No data yet'}</div>
       <div class="dash-bar"><div class="dash-bar-fill" style="width:${uptPct}%"></div></div>
       <div class="dash-icon">✅</div>
     </div>
-    <div class="dash-card c-down">
+    <div class="dash-card c-down" style="cursor:pointer" onclick="switchTab('monitor',document.querySelector('.tab'));setFilter('offline')" title="ดูอุปกรณ์ที่ Offline">
       <div class="dash-value">${tot ? dwnPct + '%' : '—'}</div>
       <div class="dash-label">Offline Rate</div>
       <div class="dash-sub">${dn > 0 ? dn + ' device' + (dn !== 1 ? 's' : '') + ' currently down' : tot ? 'All devices online ✅' : 'No data yet'}</div>
       <div class="dash-bar"><div class="dash-bar-fill" style="width:${dwnPct}%"></div></div>
       <div class="dash-icon">⚠️</div>
     </div>
-    <div class="dash-card c-blue">
+    <div class="dash-card c-blue" style="cursor:pointer" onclick="switchTab('monitor',document.querySelector('.tab'));setFilter('all')" title="ดูอุปกรณ์ทั้งหมด">
       <div class="dash-value">${tot || '—'}</div>
       <div class="dash-label">Total Devices</div>
       <div class="dash-sub">VLAN 62 · 10.0.62.x</div>
       <div class="dash-icon">🖥️</div>
     </div>
-    <div class="dash-card c-warn">
+    <div class="dash-card c-warn" style="cursor:pointer" onclick="switchTab('history',document.querySelectorAll('.tab')[3])" title="ดู History">
       <div class="dash-value" style="font-size:${avgSec?'20px':'28px'};padding-top:${avgSec?'4px':'0'}">${avgStr}</div>
       <div class="dash-label">Avg Downtime</div>
       <div class="dash-sub">${upEvts.length ? 'Per incident · ' + upEvts.length + ' resolved' : 'No resolved incidents yet'}</div>
       <div class="dash-icon">⏱️</div>
     </div>
-    <div class="dash-card c-purple">
+    <div class="dash-card c-purple" style="cursor:pointer" onclick="switchTab('history',document.querySelectorAll('.tab')[3])" title="ดู Event Log">
       <div class="dash-value">${hasEvents ? currentEvents.length : '—'}</div>
       <div class="dash-label">Total Events</div>
       <div class="dash-sub">${hasEvents ? allDownEvts.length + ' down · ' + upEvts.length + ' recovered' : 'No events loaded yet'}</div>
       <div class="dash-icon">📊</div>
     </div>
-    <div class="dash-card c-teal">
+    <div class="dash-card c-teal" style="cursor:${lastIncIp?'pointer':'default'}" ${lastIncIp?`onclick="openDDModal(${JSON.stringify(lastIncName)},${JSON.stringify(lastIncIp)})"`:''} title="${lastIncIp?'กดดูรายละเอียด':''}">
       <div class="dash-value" style="font-size:14px;padding-top:6px;line-height:1.3">${lastIncName}</div>
       <div class="dash-label">Last Incident</div>
       <div class="dash-sub" style="color:${liveDownDevices.length?'var(--down)':'var(--text2)'}">${lastIncSub}</div>
@@ -2984,8 +3018,8 @@ function renderEventLog() {
     return;
   }
   document.getElementById('evLog').innerHTML = evts.map(e => {
-    const isDown = e.type==='DOWN';
-    return `<div class="ev-item ${isDown?'down-ev':'up-ev'}">
+    const isDown  = e.type==='DOWN';
+    return `<div class="ev-item ${isDown?'down-ev':'up-ev'}" style="cursor:pointer" data-dname="${encodeURIComponent(e.name)}" data-dip="${e.ip}" onclick="_dcardClick(event,this)">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px">
         <span class="ev-type" style="color:${isDown?'var(--down)':'var(--up)'}">${e.type}</span>
         <span class="ev-ts">${e.ts}</span>
@@ -3030,7 +3064,7 @@ function showDeviceHistoryDetail() {
 
   const rows = events.length ? events.map(e=>{
     const isD=e.type==='DOWN';
-    return `<div class="ev-item ${isD?'down-ev':'up-ev'}" style="margin-left:0;padding-left:12px">
+    return `<div class="ev-item ${isD?'down-ev':'up-ev'}" style="margin-left:0;padding-left:12px;cursor:pointer" data-dname="${encodeURIComponent(device.name)}" data-dip="${ip}" onclick="_dcardClick(event,this)">
       <div style="display:flex;justify-content:space-between">
         <span style="font-weight:700;color:${isD?'var(--down)':'var(--up)'};font-size:11px;font-family:var(--mono)">${e.type}</span>
         <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">${e.ts}</span>
@@ -3132,6 +3166,10 @@ function openDDModal(name, ip) {
   // Last incident
   const lastInc = events.length ? events[events.length - 1]?.ts || '—' : '—';
 
+  // Last RECOVER time (UP event ล่าสุด)
+  const lastUpEvt  = upEvts.length ? upEvts[upEvts.length - 1] : null;
+  const lastRecoverTs = lastUpEvt ? (lastUpEvt.ts || '—') : (isUp ? (lastUpd || '—') : '—');
+
   // Update icon
   document.getElementById('ddIcon').textContent = iconForType(selType);
   const iconWrap = document.getElementById('ddIconWrap');
@@ -3157,8 +3195,26 @@ function openDDModal(name, ip) {
   // Info cells
   document.getElementById('ddLastCheck').textContent    = lastUpd;
   document.getElementById('ddLastIncident').textContent = lastInc;
-  document.getElementById('ddCurDown').textContent      = (!isUp && dur) ? dur : (isUp ? '— (Online)' : '—');
   document.getElementById('ddZone').textContent         = zone;
+  document.getElementById('ddLastRecover').textContent  = lastRecoverTs;
+
+  // Current Downtime — แสดงระยะเวลา + วันเวลาที่ดับ
+  if (!isUp && dur) {
+    const durSec = ddParseDur(dur);
+    let downSinceStr = '';
+    if (durSec > 0) {
+      const downAt = new Date(Date.now() - durSec * 1000);
+      const dd2 = String(downAt.getDate()).padStart(2,'0');
+      const mm2 = String(downAt.getMonth()+1).padStart(2,'0');
+      const yy2 = downAt.getFullYear();
+      const hh2 = String(downAt.getHours()).padStart(2,'0');
+      const mi2 = String(downAt.getMinutes()).padStart(2,'0');
+      downSinceStr = ' · ตั้งแต่ ' + dd2+'/'+mm2+'/'+yy2+' '+hh2+':'+mi2;
+    }
+    document.getElementById('ddCurDown').textContent = dur + downSinceStr;
+  } else {
+    document.getElementById('ddCurDown').textContent = isUp ? '— (Online)' : '—';
+  }
 
   // Timeline
   const tl = document.getElementById('ddTimeline');
@@ -3221,7 +3277,72 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// Touch double-tap handled inside initTopoDrag() via event delegation
+// ── MONITOR DCARD SINGLE/DOUBLE CLICK ────────────────────────
+// ── MONITOR DCARD SINGLE/DOUBLE CLICK (desktop mouse only) ──
+let _dcardClickTimer  = null;
+let _dcardClickCount  = 0;
+let _dcardLastIp      = null;
+let _dcardLastWasTouch = false;
+
+function _dcardClick(e, el) {
+  const card = (el && el.dataset) ? el : e.currentTarget;
+  const name = decodeURIComponent(card.dataset.dname || '');
+  const ip   = card.dataset.dip || '';
+  if (!name || !ip) return;
+
+  if (_dcardLastWasTouch) { _dcardLastWasTouch = false; return; }
+
+  if (_dcardLastIp !== ip) {
+    clearTimeout(_dcardClickTimer);
+    _dcardClickCount = 0;
+  }
+  _dcardLastIp = ip;
+  _dcardClickCount++;
+
+  if (_dcardClickCount >= 2) {
+    clearTimeout(_dcardClickTimer);
+    _dcardClickCount = 0;
+    _dcardLastIp = null;
+    openDDModal(name, ip);
+    return;
+  }
+
+  _dcardClickTimer = setTimeout(() => {
+    _dcardClickCount = 0;
+    _dcardLastIp = null;
+  }, 320);
+}
+
+(function initDcardDoubleTap() {
+  let _lastTap = { ip: null, t: 0 };
+  let _tapTimer = null;
+  const TAP_MS = 350;
+
+  document.body.addEventListener('touchend', function(e) {
+    const card = e.target.closest('.dcard, .alert-row, .ev-item');
+    if (!card || !card.dataset.dip) return;
+
+    const name = decodeURIComponent(card.dataset.dname || '');
+    const ip   = card.dataset.dip;
+    if (!name || !ip) return;
+
+    _dcardLastWasTouch = true;
+    const now = Date.now();
+
+    if (_lastTap.ip === ip && (now - _lastTap.t) < TAP_MS) {
+      clearTimeout(_tapTimer);
+      _lastTap = { ip: null, t: 0 };
+      e.preventDefault();
+      openDDModal(name, ip);
+    } else {
+      _lastTap = { ip, t: now };
+      clearTimeout(_tapTimer);
+      _tapTimer = setTimeout(() => {
+        if (_lastTap.ip === ip) _lastTap = { ip: null, t: 0 };
+      }, TAP_MS);
+    }
+  }, { passive: false });
+})();
 
 // ── DEVICE MODAL ─────────────────────────────────────────────
 function openDeviceModal(name, ip) {
@@ -3404,8 +3525,8 @@ function saveEditorDevice(name, ip) {
 }
 
 // ── NOTIFICATIONS ────────────────────────────────────────────
-function addNotification(type, msg) {
-  notifications.unshift({ type, msg, ts: new Date().toLocaleTimeString() });
+function addNotification(type, msg, detail) {
+  notifications.unshift({ type, msg, ts: new Date().toLocaleTimeString(), detail: detail||null });
   if (notifications.length > 50) notifications.pop();
   saveNotifications(notifications);
   updateNotifBadge();
@@ -3424,12 +3545,68 @@ function renderNotifList() {
   const el = document.getElementById('notifList');
   if (!el) return;
   if (!notifications.length) { el.innerHTML='<div class="notif-empty">No notifications yet</div>'; return; }
-  el.innerHTML = notifications.slice(0,30).map(n=>
-    `<div class="notif-item">
+  el.innerHTML = notifications.slice(0,30).map(n=>{
+    const d = n.detail;
+
+    // ── Full DOWN card ──
+    if (d && d.type === 'down') {
+      return `<div class="notif-item" style="flex-direction:column;align-items:flex-start;gap:6px;background:rgba(255,65,65,.04);border-color:rgba(255,65,65,.22)">
+        <div style="display:flex;align-items:center;gap:8px;width:100%">
+          <div class="notif-dot down"></div>
+          <div style="flex:1"><div class="notif-msg">${n.msg}</div><div class="notif-time">${n.ts}</div></div>
+        </div>
+        <div style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:10px;font-family:var(--mono)">
+            <div><span style="color:var(--muted)">📟 Device: </span><span style="color:var(--text)">${d.name}</span></div>
+            <div><span style="color:var(--muted)">🌐 IP: </span><span style="color:var(--accent)">${d.ip}</span></div>
+            <div style="grid-column:1/-1"><span style="color:var(--muted)">🕐 เวลาดับ: </span><span style="color:var(--down)">${d.now}</span></div>
+            ${d.duration ? `<div style="grid-column:1/-1"><span style="color:var(--muted)">⏱ ดับมาแล้ว: </span><span style="color:var(--warn)">${d.duration}</span></div>` : ''}
+          </div>
+          <div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">📊 สรุปสถานะ</div>
+            <div style="display:flex;gap:10px;font-size:10px;font-family:var(--mono)">
+              <span style="color:var(--up)">🟢 UP: ${d.currentUp}</span>
+              <span style="color:var(--down)">🔴 DOWN: ${d.currentDown}</span>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
+
+    // ── Full RECOVER card ──
+    if (d && d.type === 'recover') {
+      return `<div class="notif-item" style="flex-direction:column;align-items:flex-start;gap:6px;background:rgba(0,229,160,.04);border-color:rgba(0,229,160,.18)">
+        <div style="display:flex;align-items:center;gap:8px;width:100%">
+          <div class="notif-dot up"></div>
+          <div style="flex:1"><div class="notif-msg">${n.msg}</div><div class="notif-time">${n.ts}</div></div>
+        </div>
+        <div style="width:100%;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:4px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:10px;font-family:var(--mono)">
+            <div><span style="color:var(--muted)">📟 Device: </span><span style="color:var(--text)">${d.name}</span></div>
+            <div><span style="color:var(--muted)">🌐 IP: </span><span style="color:var(--accent)">${d.ip}</span></div>
+            <div><span style="color:var(--muted)">⏱ ดับไป: </span><span style="color:var(--warn)">${d.duration}</span></div>
+            <div><span style="color:var(--muted)">🕐 กลับมา: </span><span style="color:var(--text2)">${d.now}</span></div>
+          </div>
+          <div style="margin-top:4px;padding-top:4px;border-top:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.06em">📊 สรุปสถานะ</div>
+            <div style="display:flex;gap:10px;font-size:10px;font-family:var(--mono)">
+              <span style="color:var(--up)">🟢 UP: ${d.currentUp}</span>
+              <span style="color:var(--down)">🔴 DOWN: ${d.currentDown}</span>
+            </div>
+          </div>
+          ${d.currentDown === 0
+            ? `<div style="font-size:10px;color:var(--up);margin-top:2px">✅ ทุกอุปกรณ์ online แล้ว</div>`
+            : ''}
+        </div>
+      </div>`;
+    }
+
+    // ── Standard notification (fallback) ──
+    return `<div class="notif-item">
       <div class="notif-dot ${n.type}"></div>
       <div><div class="notif-msg">${n.msg}</div><div class="notif-time">${n.ts}</div></div>
-    </div>`
-  ).join('');
+    </div>`;
+  }).join('');
 }
 function clearNotifications() { notifications=[]; saveNotifications([]); updateNotifBadge(); renderNotifList(); }
 function toggleNotifPanel() { document.getElementById('notifPanel').classList.toggle('open'); renderNotifList(); }
@@ -3506,11 +3683,44 @@ async function doLoad() {
     if (sText) {
       const p = JSON.parse(sText);
       if (p.NETMON_STATUS && p.devices) {
+        const isFirstLoad = Object.keys(prevStatuses).length === 0;
         p.devices.forEach(d=>{
-          const prev = prevStatuses[d.ip];
-          if (prev !== undefined && prev !== d.status) {
-            if (d.status==='down') addNotification('down',`🔴 ${d.name} went OFFLINE`);
-            else if (d.status==='up') addNotification('up',`🟢 ${d.name} is back ONLINE`);
+          const prev      = prevStatuses[d.ip];
+          const changed   = prev !== undefined && prev !== d.status;
+          const firstDown = isFirstLoad && d.status === 'down';
+
+          if (changed || firstDown) {
+            if (d.status==='down') {
+              // ── DOWN notification (full card) ──
+              const allDevices  = p.devices;
+              const currentUp   = allDevices.filter(x => x.status==='up' && x.ip!==d.ip).length;
+              const currentDown = allDevices.filter(x => x.status==='down').length;
+
+              // คำนวณเวลาที่ดับจริง: ถ้า first load ให้ถอยหลังจาก down_duration
+              let downTime;
+              if (firstDown && d.down_duration) {
+                const durSec = parseDuration(d.down_duration);
+                downTime = new Date(Date.now() - durSec * 1000);
+              } else {
+                downTime = new Date();
+              }
+              const now = downTime.toLocaleString('th-TH', { hour12: false });
+
+              addNotification('down',
+                `🔴 [DOWN] ${d.name} ออฟไลน์`,
+                { ip: d.ip, name: d.name, now, duration: d.down_duration || '', currentUp, currentDown, type: 'down' }
+              );
+            } else if (d.status==='up' && changed) {
+              const duration   = d.down_duration || '—';
+              const now        = new Date().toLocaleString('th-TH', { hour12: false });
+              const allDevices = p.devices;
+              const currentUp  = allDevices.filter(x => x.ip===d.ip ? true : x.status==='up').length;
+              const currentDown= allDevices.filter(x => x.ip===d.ip ? false : x.status==='down').length;
+              addNotification('up',
+                `🟢 [RECOVER] ${d.name} กลับมาแล้ว`,
+                { ip: d.ip, name: d.name, duration, now, currentUp, currentDown, type: 'recover' }
+              );
+            }
           }
           prevStatuses[d.ip]=d.status;
         });
@@ -3644,18 +3854,27 @@ function applyTopoSearch(q) {
 function scrollToTopoNode(node) {
   const viewport = document.getElementById('topoViewport');
   if (!viewport || !node) return;
-  const x = parseInt(node.style.left, 10) || 0;
-  const y = parseInt(node.style.top,  10) || 0;
-  const nodeW = node.offsetWidth  || 90;
-  const nodeH = node.offsetHeight || 90;
-  // Center the node in the viewport, accounting for zoom
-  const vpW = viewport.clientWidth;
-  const vpH = viewport.clientHeight;
-  const scrollX = (x + nodeW / 2) * topoZoom - vpW / 2;
-  const scrollY = (y + nodeH / 2) * topoZoom - vpH / 2;
-  viewport.scrollTo({ left: Math.max(0, scrollX), top: Math.max(0, scrollY), behavior: 'smooth' });
-  // Flash the node briefly
-  node.classList.add('topo-search-match');
+
+  // Use rAF to ensure layout is settled after zoom/render
+  requestAnimationFrame(() => {
+    const x    = parseInt(node.style.left, 10) || 0;
+    const y    = parseInt(node.style.top,  10) || 0;
+    const nodeW = node.offsetWidth  || 90;
+    const nodeH = node.offsetHeight || 90;
+    const vpW  = viewport.clientWidth;
+    const vpH  = viewport.clientHeight;
+    const scrollX = (x + nodeW / 2) * topoZoom - vpW / 2;
+    const scrollY = (y + nodeH / 2) * topoZoom - vpH / 2;
+
+    // iOS doesn't always honor smooth scroll inside overflow containers
+    try {
+      viewport.scrollTo({ left: Math.max(0, scrollX), top: Math.max(0, scrollY), behavior: 'smooth' });
+    } catch {
+      viewport.scrollLeft = Math.max(0, scrollX);
+      viewport.scrollTop  = Math.max(0, scrollY);
+    }
+    node.classList.add('topo-search-match');
+  });
 }
 
 // ── SKELETON ─────────────────────────────────────────────────
